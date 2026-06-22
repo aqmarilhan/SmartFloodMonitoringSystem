@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "920608464918",
+    "project_id": "smart-flood-system-c5823",
+    "storage_bucket": "smart-flood-system-c5823.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:920608464918:android:df5d5b4e7e38a23551d537",
+        "android_client_info": {
+          "package_name": "com.aqmar.smartfloodsystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrqHEmCI-7ArtYXfye33QyjJ6MNGTXFOY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,8 @@
+# Ignore local build logs
+buildlog.txt
+*.log
+
+# Ignore local editor settings/files
+.vscode/
+.idea/
+*.iml
