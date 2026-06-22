@@ -42,7 +42,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
 
   Future<void> loadSettings() async {
     try {
-      final snapshot = await settingsRef.get();
+      final snapshot = await settingsRef.get().timeout(const Duration(seconds: 10));
 
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<dynamic, dynamic>.from(snapshot.value as Map);

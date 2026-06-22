@@ -61,27 +61,37 @@ class _DashboardPageState extends State<DashboardPage> {
       return;
     }
 
-    final snapshot =
-        await database.ref("Users/${currentUser.uid}/role").get();
+    try {
+      final snapshot = await database
+          .ref("Users/${currentUser.uid}/role")
+          .get()
+          .timeout(const Duration(seconds: 10));
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (snapshot.exists && snapshot.value != null) {
-      final role = snapshot.value.toString().toLowerCase();
+      if (snapshot.exists && snapshot.value != null) {
+        final role = snapshot.value.toString().toLowerCase();
 
-      setState(() {
-        isAdmin = role == "admin";
-      });
+        setState(() {
+          isAdmin = role == "admin";
+        });
 
-      debugPrint("Dashboard UID: ${currentUser.uid}");
-      debugPrint("Dashboard Role: $role");
-      debugPrint("Dashboard Is Admin: $isAdmin");
-    } else {
+        debugPrint("Dashboard UID: ${currentUser.uid}");
+        debugPrint("Dashboard Role: $role");
+        debugPrint("Dashboard Is Admin: $isAdmin");
+      } else {
+        setState(() {
+          isAdmin = false;
+        });
+
+        debugPrint("No role found for UID: ${currentUser.uid}");
+      }
+    } catch (e) {
+      debugPrint("Error checking admin access: $e");
+      if (!mounted) return;
       setState(() {
         isAdmin = false;
       });
-
-      debugPrint("No role found for UID: ${currentUser.uid}");
     }
   }
 

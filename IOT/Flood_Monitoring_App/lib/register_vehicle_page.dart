@@ -69,7 +69,10 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
 
     String ownerUsername = "Unknown User";
 
-    final userSnapshot = await database.ref("Users/${user.uid}").get();
+    final userSnapshot = await database
+        .ref("Users/${user.uid}")
+        .get()
+        .timeout(const Duration(seconds: 10));
 
     if (userSnapshot.exists && userSnapshot.value != null) {
       final userData = Map<dynamic, dynamic>.from(userSnapshot.value as Map);
@@ -95,7 +98,8 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
     });
 
     try {
-      final existingSnapshot = await vehiclesRef.get();
+      final existingSnapshot =
+          await vehiclesRef.get().timeout(const Duration(seconds: 10));
 
       if (existingSnapshot.exists && existingSnapshot.value != null) {
         final data = Map<dynamic, dynamic>.from(
@@ -639,6 +643,23 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
     return StreamBuilder<DatabaseEvent>(
       stream: vehiclesRef.onValue,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: getCardColor(isDarkMode),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Center(
+              child: Text(
+                "Error loading vehicles: ${snapshot.error}",
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
+        }
+
         if (!snapshot.hasData) {
           return const Padding(
             padding: EdgeInsets.all(20),

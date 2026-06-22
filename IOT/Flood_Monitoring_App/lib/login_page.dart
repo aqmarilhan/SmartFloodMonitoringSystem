@@ -85,19 +85,6 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final emailRegistered = await isEmailRegistered(email);
-
-      if (!emailRegistered) {
-        if (!mounted) return;
-
-        setState(() {
-          isLoading = false;
-        });
-
-        showMessage("Email not registered.");
-        return;
-      }
-
       final credential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,

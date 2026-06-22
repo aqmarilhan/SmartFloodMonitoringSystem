@@ -51,7 +51,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     }
 
     try {
-      final snapshot = await contactRef.get();
+      final snapshot = await contactRef.get().timeout(const Duration(seconds: 10));
 
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<dynamic, dynamic>.from(snapshot.value as Map);

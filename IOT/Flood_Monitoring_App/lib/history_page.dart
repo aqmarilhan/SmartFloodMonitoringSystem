@@ -37,7 +37,8 @@ class _HistoryPageState extends State<HistoryPage> {
 
     final snapshot = await database
         .ref("Users/${currentUser.uid}/role")
-        .get();
+        .get()
+        .timeout(const Duration(seconds: 10));
 
     if (snapshot.exists && snapshot.value != null) {
       final role = snapshot.value.toString().toLowerCase();
@@ -261,13 +262,26 @@ class _HistoryPageState extends State<HistoryPage> {
         ],
       ),
       body: StreamBuilder<DatabaseEvent>(
-        stream: historyRef.limitToLast(100).onValue,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+      stream: historyRef.limitToLast(100).onValue,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Text(
+                "Error loading history: ${snapshot.error}",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
 
           final data = snapshot.data!.snapshot.value;
 

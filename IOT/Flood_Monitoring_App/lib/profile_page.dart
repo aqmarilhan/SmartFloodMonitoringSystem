@@ -76,7 +76,7 @@ class _ProfilePageState extends State<ProfilePage> {
         currentUser.emailVerified ? "Verified" : "Not Verified";
 
     try {
-      final snapshot = await userRef.get();
+      final snapshot = await userRef.get().timeout(const Duration(seconds: 10));
 
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<dynamic, dynamic>.from(snapshot.value as Map);

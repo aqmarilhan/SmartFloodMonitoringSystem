@@ -50,7 +50,7 @@ class _RatingPageState extends State<RatingPage> {
     }
 
     try {
-      final snapshot = await database.ref("Ratings/${user.uid}").get();
+      final snapshot = await database.ref("Ratings/${user.uid}").get().timeout(const Duration(seconds: 10));
 
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<dynamic, dynamic>.from(snapshot.value as Map);
