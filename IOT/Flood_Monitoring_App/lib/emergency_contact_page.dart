@@ -166,12 +166,6 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     );
   }
 
-  bool hasAnyContactField(int index) {
-    return nameControllers[index].text.trim().isNotEmpty ||
-        phoneControllers[index].text.trim().isNotEmpty ||
-        relationshipControllers[index].text.trim().isNotEmpty;
-  }
-
   bool isContactComplete(int index) {
     return nameControllers[index].text.trim().isNotEmpty &&
         phoneControllers[index].text.trim().isNotEmpty &&
@@ -183,7 +177,12 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     return digitsOnly.length >= 9;
   }
 
-  Future<void> saveContacts() async {
+  Future<void> saveSingleContact(
+    int index,
+    String name,
+    String phone,
+    String relationship,
+  ) async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -191,32 +190,32 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
       return;
     }
 
-    if (!isContactComplete(activeContactIndex)) {
+    final nameTrimmed = name.trim();
+    final phoneTrimmed = phone.trim();
+    final relTrimmed = relationship.trim();
+
+    final hasAny = nameTrimmed.isNotEmpty ||
+        phoneTrimmed.isNotEmpty ||
+        relTrimmed.isNotEmpty;
+    final complete = nameTrimmed.isNotEmpty &&
+        phoneTrimmed.isNotEmpty &&
+        relTrimmed.isNotEmpty;
+
+    if (hasAny && !complete) {
       showMessage(
-        "Please complete Contact ${activeContactIndex + 1} before selecting it as emergency contact.",
+        "Please complete all fields for Contact ${index + 1}, or leave them all empty.",
       );
       return;
     }
 
-    final activePhone = phoneControllers[activeContactIndex].text.trim();
-
-    if (!isPhoneValid(activePhone)) {
-      showMessage("Contact ${activeContactIndex + 1} phone number is not valid.");
+    if (complete && !isPhoneValid(phoneTrimmed)) {
+      showMessage("Contact ${index + 1} phone number is not valid.");
       return;
     }
 
-    for (int i = 0; i < 3; i++) {
-      if (hasAnyContactField(i) && !isContactComplete(i)) {
-        showMessage(
-          "Please complete all fields for Contact ${i + 1}, or leave it empty.",
-        );
-        return;
-      }
-
-      if (isContactComplete(i) && !isPhoneValid(phoneControllers[i].text.trim())) {
-        showMessage("Contact ${i + 1} phone number is not valid.");
-        return;
-      }
+    // If clearing the active contact, set active to another complete contact or default to 0
+    if (!complete && activeContactIndex == index) {
+      activeContactIndex = 0;
     }
 
     setState(() {
@@ -224,6 +223,11 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     });
 
     try {
+      // Temporarily write values to controllers so state changes show on main screen
+      nameControllers[index].text = nameTrimmed;
+      phoneControllers[index].text = phoneTrimmed;
+      relationshipControllers[index].text = relTrimmed;
+
       await contactReference(user.uid).set({
         "uid": user.uid,
         "email": user.email ?? "Unknown email",
@@ -239,7 +243,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
         isSaving = false;
       });
 
-      showMessage("Emergency contacts saved successfully.");
+      showMessage("Contact ${index + 1} updated successfully.");
     } catch (e) {
       if (!mounted) return;
 
@@ -247,17 +251,49 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
         isSaving = false;
       });
 
-      showMessage("Failed to save contacts: $e");
+      showMessage("Failed to save contact: $e");
     }
   }
 
-  Future<void> callEmergencyContact() async {
-    if (!isContactComplete(activeContactIndex)) {
-      showMessage("Please complete Contact ${activeContactIndex + 1} first.");
+  Future<void> setActiveContact(int index) async {
+    if (!isContactComplete(index)) {
+      showMessage(
+        "Please complete Contact ${index + 1} before selecting it as primary emergency contact.",
+      );
       return;
     }
 
-    final phone = phoneControllers[activeContactIndex].text.trim();
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      showMessage("Please login first.");
+      return;
+    }
+
+    setState(() {
+      activeContactIndex = index;
+    });
+
+    try {
+      await contactReference(user.uid).update({
+        "activeContactIndex": index,
+        "updatedAt": DateTime.now().toString(),
+        "updatedAtEpoch": DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      });
+
+      showMessage("Contact ${index + 1} set as primary emergency contact.");
+    } catch (e) {
+      showMessage("Failed to set active contact: $e");
+    }
+  }
+
+  Future<void> callContact(int index) async {
+    if (!isContactComplete(index)) {
+      showMessage("Please complete Contact ${index + 1} first.");
+      return;
+    }
+
+    final phone = phoneControllers[index].text.trim();
 
     if (!isPhoneValid(phone)) {
       showMessage("Invalid phone number.");
@@ -361,7 +397,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Save up to 3 contacts and toggle which one to call during emergency.",
+            "Save up to 3 contacts, select a primary target for alerts, and call any of them directly.",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
@@ -374,12 +410,31 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     );
   }
 
-  Widget buildContactToggleSection(bool isDarkMode) {
+  Widget buildContactCard(int index, bool isDarkMode) {
+    final name = nameControllers[index].text.trim();
+    final phone = phoneControllers[index].text.trim();
+    final relationship = relationshipControllers[index].text.trim();
+
+    final complete = isContactComplete(index);
+    final isActive = activeContactIndex == index;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: getCardColor(isDarkMode),
         borderRadius: BorderRadius.circular(26),
+        border: isActive
+            ? Border.all(
+                color: Colors.redAccent.withOpacity(0.8),
+                width: 2.5,
+              )
+            : Border.all(
+                color: complete
+                    ? Colors.green.withOpacity(0.3)
+                    : Colors.grey.withOpacity(0.2),
+                width: 1,
+              ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.08),
@@ -391,215 +446,378 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Choose contact to call",
-            style: TextStyle(
-              color: getMainTextColor(isDarkMode),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "Tap one contact below. The selected contact will be used for the emergency call button.",
-            style: TextStyle(
-              color: getSubTextColor(isDarkMode),
-              fontSize: 13,
-              height: 1.4,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? Colors.redAccent.withOpacity(0.12)
+                          : complete
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.grey.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: isActive
+                          ? Colors.redAccent
+                          : complete
+                              ? Colors.green
+                              : getSubTextColor(isDarkMode),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    "Contact ${index + 1}",
+                    style: TextStyle(
+                      color: getMainTextColor(isDarkMode),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              if (complete)
+                GestureDetector(
+                  onTap: () => setActiveContact(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? Colors.redAccent
+                          : isDarkMode
+                              ? const Color(0xFF0F172A)
+                              : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isActive
+                            ? Colors.redAccent
+                            : Colors.grey.withOpacity(0.4),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isActive
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          color: isActive
+                              ? Colors.white
+                              : getSubTextColor(isDarkMode),
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isActive ? "Primary" : "Set Primary",
+                          style: TextStyle(
+                            color: isActive
+                                ? Colors.white
+                                : getSubTextColor(isDarkMode),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? const Color(0xFF0F172A)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.grey.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Text(
+                    "Not Set",
+                    style: TextStyle(
+                      color: getSubTextColor(isDarkMode).withOpacity(0.6),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: List.generate(
-              3,
-              (index) {
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: index == 2 ? 0 : 8,
-                    ),
-                    child: buildContactToggleButton(index, isDarkMode),
+          if (complete) ...[
+            buildDetailRow(
+              icon: Icons.person_outline_rounded,
+              label: "Name",
+              value: name,
+              isDarkMode: isDarkMode,
+            ),
+            const SizedBox(height: 10),
+            buildDetailRow(
+              icon: Icons.phone_android_rounded,
+              label: "Phone",
+              value: phone,
+              isDarkMode: isDarkMode,
+            ),
+            const SizedBox(height: 10),
+            buildDetailRow(
+              icon: Icons.family_restroom_rounded,
+              label: "Relationship",
+              value: relationship,
+              isDarkMode: isDarkMode,
+            ),
+          ] else ...[
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  "No details configured for this contact card.",
+                  style: TextStyle(
+                    color: getSubTextColor(isDarkMode).withOpacity(0.7),
+                    fontStyle: FontStyle.italic,
+                    fontSize: 13,
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildContactToggleButton(int index, bool isDarkMode) {
-    final selected = activeContactIndex == index;
-    final complete = isContactComplete(index);
-    final name = nameControllers[index].text.trim();
-    final relationship = relationshipControllers[index].text.trim();
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          activeContactIndex = index;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(
-          vertical: 14,
-          horizontal: 8,
-        ),
-        decoration: BoxDecoration(
-          color: selected
-              ? Colors.redAccent
-              : isDarkMode
-                  ? const Color(0xFF0F172A)
-                  : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected
-                ? Colors.redAccent
-                : complete
-                    ? Colors.green
-                    : Colors.grey.withOpacity(0.35),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              selected
-                  ? Icons.radio_button_checked_rounded
-                  : Icons.radio_button_off_rounded,
-              color: selected
-                  ? Colors.white
-                  : complete
-                      ? Colors.green
-                      : getSubTextColor(isDarkMode),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Contact ${index + 1}",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: selected ? Colors.white : getMainTextColor(isDarkMode),
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              name.isEmpty ? "Not set" : name,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected ? Colors.white70 : getSubTextColor(isDarkMode),
-                fontSize: 11,
-              ),
-            ),
-            if (relationship.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(
-                relationship,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color:
-                      selected ? Colors.white70 : getSubTextColor(isDarkMode),
-                  fontSize: 10,
                 ),
               ),
-            ],
+            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildActiveContactCard(bool isDarkMode) {
-    final index = activeContactIndex;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: getCardColor(isDarkMode),
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
+          const SizedBox(height: 16),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(11),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.person_pin_rounded,
-                  color: Colors.redAccent,
-                ),
-              ),
-              const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  "Contact ${index + 1} Details",
-                  style: TextStyle(
-                    color: getMainTextColor(isDarkMode),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                child: ElevatedButton.icon(
+                  onPressed: () => showEditBottomSheet(index),
+                  icon: const Icon(Icons.edit_rounded, size: 18),
+                  label: Text(complete ? "Edit" : "Set Contact"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDarkMode
+                        ? const Color(0xFF0F172A)
+                        : Colors.grey.shade200,
+                    foregroundColor: getMainTextColor(isDarkMode),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: isDarkMode
+                            ? const Color(0xFF334155)
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Text(
-                  "CALL TARGET",
-                  style: TextStyle(
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
+              if (complete) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => callContact(index),
+                    icon: const Icon(Icons.phone_rounded, size: 18),
+                    label: const Text("Call Now"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ),
-          const SizedBox(height: 18),
-          buildTextField(
-            controller: nameControllers[index],
-            label: "Contact Name",
-            icon: Icons.person_rounded,
-            isDarkMode: isDarkMode,
-          ),
-          buildTextField(
-            controller: phoneControllers[index],
-            label: "Phone Number",
-            icon: Icons.phone_rounded,
-            keyboardType: TextInputType.phone,
-            isDarkMode: isDarkMode,
-          ),
-          buildTextField(
-            controller: relationshipControllers[index],
-            label: "Relationship",
-            icon: Icons.family_restroom_rounded,
-            isDarkMode: isDarkMode,
           ),
         ],
       ),
+    );
+  }
+
+  Widget buildDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isDarkMode,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          color: getSubTextColor(isDarkMode).withOpacity(0.7),
+          size: 18,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          "$label: ",
+          style: TextStyle(
+            color: getSubTextColor(isDarkMode),
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: getMainTextColor(isDarkMode),
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void showEditBottomSheet(int index) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final tempNameController =
+        TextEditingController(text: nameControllers[index].text);
+    final tempPhoneController =
+        TextEditingController(text: phoneControllers[index].text);
+    final tempRelController =
+        TextEditingController(text: relationshipControllers[index].text);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: BoxDecoration(
+                color: getCardColor(isDarkMode),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 48,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: isDarkMode
+                              ? Colors.grey.shade700
+                              : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "Edit Contact ${index + 1}",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: getMainTextColor(isDarkMode),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    buildTextField(
+                      controller: tempNameController,
+                      label: "Contact Name",
+                      icon: Icons.person_rounded,
+                      isDarkMode: isDarkMode,
+                      onChanged: () => setModalState(() {}),
+                    ),
+                    buildTextField(
+                      controller: tempPhoneController,
+                      label: "Phone Number",
+                      icon: Icons.phone_rounded,
+                      keyboardType: TextInputType.phone,
+                      isDarkMode: isDarkMode,
+                      onChanged: () => setModalState(() {}),
+                    ),
+                    buildTextField(
+                      controller: tempRelController,
+                      label: "Relationship",
+                      icon: Icons.family_restroom_rounded,
+                      isDarkMode: isDarkMode,
+                      onChanged: () => setModalState(() {}),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: getSubTextColor(isDarkMode),
+                              side: BorderSide(
+                                color: isDarkMode
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade300,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text("Cancel"),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final name = tempNameController.text;
+                              final phone = tempPhoneController.text;
+                              final rel = tempRelController.text;
+
+                              Navigator.pop(context);
+                              await saveSingleContact(index, name, phone, rel);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              "Save",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -609,6 +827,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     required IconData icon,
     required bool isDarkMode,
     TextInputType keyboardType = TextInputType.text,
+    VoidCallback? onChanged,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -616,7 +835,11 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
         controller: controller,
         keyboardType: keyboardType,
         onChanged: (_) {
-          setState(() {});
+          if (onChanged != null) {
+            onChanged();
+          } else {
+            setState(() {});
+          }
         },
         style: TextStyle(
           color: getMainTextColor(isDarkMode),
@@ -644,128 +867,6 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget buildActionButtons(bool isDarkMode) {
-    final activeName = nameControllers[activeContactIndex].text.trim();
-    final activePhone = phoneControllers[activeContactIndex].text.trim();
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: getCardColor(isDarkMode),
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.info_outline_rounded,
-                color: Colors.redAccent,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  activeName.isEmpty
-                      ? "Selected: Contact ${activeContactIndex + 1}"
-                      : "Selected: $activeName",
-                  style: TextStyle(
-                    color: getMainTextColor(isDarkMode),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (activePhone.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(
-                  Icons.phone_rounded,
-                  color: Colors.green,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    activePhone,
-                    style: TextStyle(
-                      color: getSubTextColor(isDarkMode),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: isSaving ? null : saveContacts,
-              icon: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.save_rounded),
-              label: Text(
-                isSaving ? "Saving Contacts..." : "Save All Contacts",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: OutlinedButton.icon(
-              onPressed: callEmergencyContact,
-              icon: const Icon(Icons.call_rounded),
-              label: Text(
-                "Call Contact ${activeContactIndex + 1}",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.redAccent,
-                side: const BorderSide(
-                  color: Colors.redAccent,
-                  width: 2,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -820,11 +921,9 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
                   children: [
                     buildHeader(isDarkMode),
                     const SizedBox(height: 18),
-                    buildContactToggleSection(isDarkMode),
-                    const SizedBox(height: 18),
-                    buildActiveContactCard(isDarkMode),
-                    const SizedBox(height: 18),
-                    buildActionButtons(isDarkMode),
+                    buildContactCard(0, isDarkMode),
+                    buildContactCard(1, isDarkMode),
+                    buildContactCard(2, isDarkMode),
                     const SizedBox(height: 18),
                   ],
                 ),
