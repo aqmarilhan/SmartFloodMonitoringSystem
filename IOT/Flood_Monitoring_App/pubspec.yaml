@@ -67,10 +67,10 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/flood_logo.png"
+  image_path: "assets/images/flood_logo_icon.png"
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

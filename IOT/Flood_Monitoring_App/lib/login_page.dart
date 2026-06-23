@@ -349,24 +349,26 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
                             color: isDarkMode
-                                ? const Color(0xFF06B6D4).withOpacity(0.18)
-                                : const Color(0xFF0284C7).withOpacity(0.12),
+                                ? const Color(0xFF06B6D4).withOpacity(0.2)
+                                : const Color(0xFF0284C7).withOpacity(0.1),
                             blurRadius: 24,
-                            spreadRadius: 2,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
-                      child: ClipOval(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
                         child: Image.asset(
                           'assets/images/flood_logo.png',
-                          width: MediaQuery.of(context).size.width * 0.38,
-                          height: MediaQuery.of(context).size.width * 0.38,
+                          width: MediaQuery.of(context).size.width * 0.55,
+                          height: MediaQuery.of(context).size.width * 0.45,
                           fit: BoxFit.contain,
                         ),
                       ),
