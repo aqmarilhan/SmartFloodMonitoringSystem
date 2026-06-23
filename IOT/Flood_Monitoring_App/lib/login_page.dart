@@ -166,7 +166,16 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      
+      // Clear cached Google Sign-In session so the account chooser always appears
+      try {
+        await googleSignIn.signOut();
+      } catch (e) {
+        // Ignore errors if signout fails or wasn't signed in
+      }
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         setState(() {
           isLoading = false;

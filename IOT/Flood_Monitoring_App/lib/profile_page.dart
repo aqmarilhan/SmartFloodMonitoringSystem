@@ -6,6 +6,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'login_page.dart';
 import 'theme_provider.dart';
@@ -274,6 +275,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
+    try {
+      await GoogleSignIn().signOut();
+    } catch (e) {
+      // Ignore
+    }
 
     if (!mounted) return;
 
