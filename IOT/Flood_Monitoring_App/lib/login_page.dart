@@ -6,6 +6,7 @@ import 'theme_provider.dart';
 import 'signup_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -156,6 +157,90 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       showMessage("Login error: $e");
+    }
+  }
+
+  Future<void> signInWithGoogle() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      final user = userCredential.user;
+
+      if (user != null) {
+        final database = FirebaseDatabase.instanceFor(
+          app: Firebase.app(),
+          databaseURL: databaseURL,
+        );
+
+        final userRef = database.ref("Users").child(user.uid);
+        final snapshot = await userRef.get();
+
+        if (!snapshot.exists || snapshot.value == null) {
+          await userRef.set({
+            "username": user.displayName ?? user.email!.split('@')[0],
+            "email": user.email,
+            "role": "User",
+            "createdAt": DateTime.now().toString(),
+            "profileImagePath": "",
+          });
+        }
+
+        if (!mounted) return;
+
+        setState(() {
+          isLoading = false;
+        });
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const DashboardPage(),
+          ),
+        );
+      } else {
+        throw Exception("Failed to retrieve user information from Google.");
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = "Google Sign-In failed.";
+      if (e.code == "account-exists-with-different-credential") {
+        message = "An account already exists with the same email address.";
+      } else if (e.code == "invalid-credential") {
+        message = "Error using Google credentials.";
+      } else if (e.code == "network-request-failed") {
+        message = "Network error. Please check your internet connection.";
+      }
+
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
+      showMessage(message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
+      showMessage("Google Sign-In error: $e");
     }
   }
 
@@ -340,6 +425,75 @@ class _LoginPageState extends State<LoginPage> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+                          thickness: 1,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          "OR",
+                          style: TextStyle(
+                            color: getSubTextColor(isDarkMode),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: OutlinedButton(
+                      onPressed: isLoading ? null : signInWithGoogle,
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        backgroundColor: isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+                        foregroundColor: getMainTextColor(isDarkMode),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.network(
+                            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/480px-Google_%22G%22_logo.svg.png',
+                            height: 24,
+                            width: 24,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, size: 28),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            "Sign in with Google",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
