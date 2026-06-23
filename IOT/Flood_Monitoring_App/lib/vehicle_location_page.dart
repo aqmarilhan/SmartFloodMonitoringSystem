@@ -27,6 +27,8 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
   final double defaultLongitude = 103.6375;
 
   GoogleMapController? _mapController;
+  LatLng? tappedLatLng;
+  LatLng? initialMapCenter;
 
   FirebaseDatabase get database {
     return FirebaseDatabase.instanceFor(
@@ -39,6 +41,7 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
   void initState() {
     super.initState();
     loadVehicles();
+    _fetchInitialMapCenter();
   }
 
   @override
@@ -52,15 +55,36 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
   }
 
   void _updateMapCamera() {
-    if (_mapController != null && hasVehicleLocation()) {
-      final lat = getSelectedLatitude();
-      final lng = getSelectedLongitude();
+    if (_mapController != null) {
+      LatLng target;
+      if (tappedLatLng != null) {
+        target = tappedLatLng!;
+      } else if (hasVehicleLocation()) {
+        target = LatLng(getSelectedLatitude(), getSelectedLongitude());
+      } else if (initialMapCenter != null) {
+        target = initialMapCenter!;
+      } else {
+        target = LatLng(defaultLatitude, defaultLongitude);
+      }
       _mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(
-          LatLng(lat, lng),
+          target,
           15.0,
         ),
       );
+    }
+  }
+
+  Future<void> _fetchInitialMapCenter() async {
+    try {
+      final position = await getCurrentPosition();
+      if (position != null && mounted) {
+        setState(() {
+          initialMapCenter = LatLng(position.latitude, position.longitude);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching map center: $e");
     }
   }
 
@@ -206,6 +230,59 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
       if (!mounted) return;
 
       setState(() {
+        isSavingLocation = false;
+      });
+
+      showMessage("Vehicle location updated successfully.");
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isSavingLocation = false;
+      });
+
+      showMessage("Failed to update location: $e");
+    }
+  }
+
+  Future<void> saveTappedLocation() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      showMessage("User not logged in.");
+      return;
+    }
+
+    if (selectedVehicleId == null) {
+      showMessage("Please register a vehicle first.");
+      return;
+    }
+
+    if (tappedLatLng == null) {
+      showMessage("No location selected on map.");
+      return;
+    }
+
+    setState(() {
+      isSavingLocation = true;
+    });
+
+    try {
+      final ref = database.ref("Vehicles/${user.uid}/$selectedVehicleId");
+
+      await ref.update({
+        "latitude": tappedLatLng!.latitude,
+        "longitude": tappedLatLng!.longitude,
+        "locationUpdatedAt": DateTime.now().toString(),
+        "locationUpdatedAtEpoch": DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      });
+
+      await loadVehicles();
+
+      if (!mounted) return;
+
+      setState(() {
+        tappedLatLng = null;
         isSavingLocation = false;
       });
 
@@ -464,40 +541,91 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
             onChanged: (value) {
               setState(() {
                 selectedVehicleId = value;
+                tappedLatLng = null; // Clear custom pin on change
               });
               _updateMapCamera();
             },
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: ElevatedButton.icon(
-              onPressed: isSavingLocation ? null : saveCurrentLocation,
-              icon: isSavingLocation
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.my_location_rounded),
-              label: Text(
-                isSavingLocation
-                    ? "Saving Location..."
-                    : "Save Current Location",
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+          if (tappedLatLng != null) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: isSavingLocation ? null : saveTappedLocation,
+                icon: isSavingLocation
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.check_circle_rounded),
+                label: const Text("Save Selected Pin Location"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    tappedLatLng = null;
+                  });
+                  _updateMapCamera();
+                },
+                icon: const Icon(Icons.cancel_rounded),
+                label: const Text("Clear Selected Pin"),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: isSavingLocation ? null : saveCurrentLocation,
+                icon: isSavingLocation
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.my_location_rounded),
+                label: Text(
+                  isSavingLocation
+                      ? "Saving Location..."
+                      : "Save Current Location",
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.lightBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -507,6 +635,16 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
     final hasLocation = hasVehicleLocation();
     final latitude = getSelectedLatitude();
     final longitude = getSelectedLongitude();
+
+    // Determine the map center position
+    LatLng mapCenter;
+    if (tappedLatLng != null) {
+      mapCenter = tappedLatLng!;
+    } else if (hasLocation) {
+      mapCenter = LatLng(latitude, longitude);
+    } else {
+      mapCenter = initialMapCenter ?? LatLng(defaultLatitude, defaultLongitude);
+    }
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -553,62 +691,63 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
-              child: hasLocation
-                  ? GoogleMap(
-                      onMapCreated: _onMapCreated,
-                      initialCameraPosition: CameraPosition(
-                        target: LatLng(latitude, longitude),
-                        zoom: 15.0,
+              child: GoogleMap(
+                onMapCreated: _onMapCreated,
+                initialCameraPosition: CameraPosition(
+                  target: mapCenter,
+                  zoom: 15.0,
+                ),
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                onTap: (latLng) {
+                  setState(() {
+                    tappedLatLng = latLng;
+                  });
+                },
+                markers: {
+                  if (tappedLatLng != null)
+                    Marker(
+                      markerId: const MarkerId("tapped_position"),
+                      position: tappedLatLng!,
+                      icon: BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueRed,
                       ),
-                      markers: {
-                        Marker(
-                          markerId: const MarkerId("vehicle_position"),
-                          position: LatLng(latitude, longitude),
-                          infoWindow: InfoWindow(
-                            title: getVehicleText("plateNumber"),
-                            snippet: "Flood Status: ${getVehicleText("currentStatus")}",
-                          ),
-                        ),
-                      },
+                      infoWindow: const InfoWindow(
+                        title: "Selected Location",
+                        snippet: "Tap Save Selected Pin Location to confirm",
+                      ),
                     )
-                  : Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.location_off_rounded,
-                            color: Colors.grey,
-                            size: 44,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            "No GPS location saved yet",
-                            style: TextStyle(
-                              color: getMainTextColor(isDarkMode),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Text(
-                              "Press Save Current Location first to store your vehicle position.",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: getSubTextColor(isDarkMode),
-                              ),
-                            ),
-                          ),
-                        ],
+                  else if (hasLocation)
+                    Marker(
+                      markerId: const MarkerId("vehicle_position"),
+                      position: LatLng(latitude, longitude),
+                      infoWindow: InfoWindow(
+                        title: getVehicleText("plateNumber"),
+                        snippet:
+                            "Flood Status: ${getVehicleText("currentStatus")}",
                       ),
                     ),
+                },
+              ),
             ),
           ),
-          if (hasLocation) ...[
+          if (tappedLatLng != null) ...[
             const SizedBox(height: 12),
             Center(
               child: Text(
-                "Latitude: $latitude  |  Longitude: $longitude",
+                "Selected Pin: ${tappedLatLng!.latitude.toStringAsFixed(6)}, ${tappedLatLng!.longitude.toStringAsFixed(6)}",
+                style: TextStyle(
+                  color: Colors.green.shade600,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ] else if (hasLocation) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                "Latitude: ${latitude.toStringAsFixed(6)}  |  Longitude: ${longitude.toStringAsFixed(6)}",
                 style: TextStyle(
                   color: getSubTextColor(isDarkMode),
                   fontSize: 13,
