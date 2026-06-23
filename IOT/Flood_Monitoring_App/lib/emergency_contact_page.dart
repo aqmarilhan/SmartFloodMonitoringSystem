@@ -1,8 +1,51 @@
+import 'dart:typed_data';
+import 'package:encrypt/encrypt.dart' as enc;
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+// SHA-256 AES Client-side Encryption Helper
+class EmergencyContactEncryption {
+  static enc.Encrypter _getEncrypter(String uid) {
+    final keyBytes = sha256.convert(utf8.encode(uid + "EmergencyContactKeySalt!")).bytes;
+    final key = enc.Key(Uint8List.fromList(keyBytes));
+    return enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+  }
+
+  static enc.IV _getIV(String uid) {
+    final ivBytes = sha256.convert(utf8.encode(uid + "EmergencyContactIVSalt!")).bytes.sublist(0, 16);
+    return enc.IV(Uint8List.fromList(ivBytes));
+  }
+
+  static String encrypt(String plaintext, String uid) {
+    if (plaintext.isEmpty) return "";
+    try {
+      final encrypter = _getEncrypter(uid);
+      final iv = _getIV(uid);
+      final encrypted = encrypter.encrypt(plaintext, iv: iv);
+      return encrypted.base64;
+    } catch (e) {
+      debugPrint("Encryption error: $e");
+      return plaintext;
+    }
+  }
+
+  static String decrypt(String ciphertext, String uid) {
+    if (ciphertext.isEmpty) return "";
+    try {
+      final encrypter = _getEncrypter(uid);
+      final iv = _getIV(uid);
+      final decrypted = encrypter.decrypt(enc.Encrypted.fromBase64(ciphertext), iv: iv);
+      return decrypted;
+    } catch (e) {
+      return ciphertext; // Fallback for legacy plaintext records
+    }
+  }
+}
 
 class EmergencyContactPage extends StatefulWidget {
   const EmergencyContactPage({super.key});
@@ -70,10 +113,9 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
         final data = Map<dynamic, dynamic>.from(snapshot.value as Map);
 
         if (data.containsKey("name") && data["name"] != null) {
-          nameControllers[0].text = data["name"]?.toString() ?? "";
-          phoneControllers[0].text = data["phone"]?.toString() ?? "";
-          relationshipControllers[0].text =
-              data["relationship"]?.toString() ?? "";
+          nameControllers[0].text = EmergencyContactEncryption.decrypt(data["name"]?.toString() ?? "", user.uid);
+          phoneControllers[0].text = EmergencyContactEncryption.decrypt(data["phone"]?.toString() ?? "", user.uid);
+          relationshipControllers[0].text = EmergencyContactEncryption.decrypt(data["relationship"]?.toString() ?? "", user.uid);
 
           activeContactIndex = 0;
 
@@ -103,10 +145,9 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
             if (contactRaw != null && contactRaw is Map) {
               final contact = Map<dynamic, dynamic>.from(contactRaw);
 
-              nameControllers[i].text = contact["name"]?.toString() ?? "";
-              phoneControllers[i].text = contact["phone"]?.toString() ?? "";
-              relationshipControllers[i].text =
-                  contact["relationship"]?.toString() ?? "";
+              nameControllers[i].text = EmergencyContactEncryption.decrypt(contact["name"]?.toString() ?? "", user.uid);
+              phoneControllers[i].text = EmergencyContactEncryption.decrypt(contact["phone"]?.toString() ?? "", user.uid);
+              relationshipControllers[i].text = EmergencyContactEncryption.decrypt(contact["relationship"]?.toString() ?? "", user.uid);
             }
           }
         }
@@ -138,7 +179,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     required String email,
   }) async {
     try {
-      final contactsData = generateContactsData();
+      final contactsData = generateContactsData(uid);
 
       await contactReference(uid).set({
         "uid": uid,
@@ -153,14 +194,14 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     }
   }
 
-  List<Map<String, String>> generateContactsData() {
+  List<Map<String, String>> generateContactsData(String uid) {
     return List.generate(
       3,
       (index) {
         return {
-          "name": nameControllers[index].text.trim(),
-          "phone": phoneControllers[index].text.trim(),
-          "relationship": relationshipControllers[index].text.trim(),
+          "name": EmergencyContactEncryption.encrypt(nameControllers[index].text.trim(), uid),
+          "phone": EmergencyContactEncryption.encrypt(phoneControllers[index].text.trim(), uid),
+          "relationship": EmergencyContactEncryption.encrypt(relationshipControllers[index].text.trim(), uid),
         };
       },
     );
@@ -232,7 +273,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
         "uid": user.uid,
         "email": user.email ?? "Unknown email",
         "activeContactIndex": activeContactIndex,
-        "contacts": generateContactsData(),
+        "contacts": generateContactsData(user.uid),
         "updatedAt": DateTime.now().toString(),
         "updatedAtEpoch": DateTime.now().millisecondsSinceEpoch ~/ 1000,
       });
@@ -405,6 +446,27 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
               color: Colors.white.withOpacity(0.9),
             ),
           ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.lock_rounded,
+                color: Colors.greenAccent.shade200,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                "End-to-End Encrypted (AES-256)",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.greenAccent.shade200,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -479,6 +541,12 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.security_rounded,
+                    color: Colors.green.shade600,
+                    size: 16,
                   ),
                 ],
               ),

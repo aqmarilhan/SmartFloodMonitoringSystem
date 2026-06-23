@@ -1,3 +1,5 @@
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -211,6 +213,82 @@ class _HistoryPageState extends State<HistoryPage> {
     return value.toStringAsFixed(2);
   }
 
+  int verifyDataIntegrity(Map<dynamic, dynamic> history) {
+    final hashVal = history["hash"]?.toString();
+    if (hashVal == null || hashVal.isEmpty) {
+      return 0; // Unsigned (legacy)
+    }
+
+    final distanceStr = formatDistance(history["distance_cm"]);
+    final waterLevelStr = history["water_level"]?.toString() ?? "--";
+    final statusStr = history["flood_status"]?.toString() ?? "--";
+    final ledStr = history["led_indicator_status"]?.toString() ?? "--";
+    final timestampStr = history["timestamp"]?.toString() ?? "--";
+
+    final dataToHash = "$distanceStr$waterLevelStr$statusStr$ledStr$timestampStr";
+    final computedHash = sha256.convert(utf8.encode(dataToHash + "FloodSecuritySalt123!")).toString();
+
+    if (computedHash == hashVal) {
+      return 1; // Verified
+    } else {
+      return -1; // Tamper detected!
+    }
+  }
+
+  Widget buildIntegrityBadge(Map<dynamic, dynamic> history, bool isDarkMode) {
+    final verification = verifyDataIntegrity(history);
+
+    Color bgColor;
+    Color textColor;
+    IconData icon;
+    String label;
+
+    if (verification == 1) {
+      bgColor = Colors.green.withValues(alpha: 0.16);
+      textColor = isDarkMode ? Colors.greenAccent : Colors.green.shade700;
+      icon = Icons.verified_user_rounded;
+      label = "Verified";
+    } else if (verification == -1) {
+      bgColor = Colors.red.withValues(alpha: 0.16);
+      textColor = isDarkMode ? Colors.redAccent : Colors.red.shade700;
+      icon = Icons.gpp_bad_rounded;
+      label = "Tampered!";
+    } else {
+      bgColor = Colors.grey.withValues(alpha: 0.16);
+      textColor = isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700;
+      icon = Icons.help_outline_rounded;
+      label = "Legacy";
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: textColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: textColor,
+            size: 14,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -389,6 +467,8 @@ class _HistoryPageState extends State<HistoryPage> {
                             ],
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        buildIntegrityBadge(history, isDarkMode),
                       ],
                     ),
                     const SizedBox(height: 14),

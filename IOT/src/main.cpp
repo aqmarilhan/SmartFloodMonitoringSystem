@@ -4,6 +4,7 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <time.h>
+#include <mbedtls/sha256.h>
 
 // =========================
 // WIFI
@@ -78,6 +79,27 @@ String previousStatus = "";
 String previousWaterSensorHealth = "";
 String waterSensorHealth = "OK";
 String ultrasonicHealth = "OK";
+
+// SHA-256 Cryptographic Hash Helper
+String calculateSHA256(String data, String key) {
+  String input = data + key;
+  unsigned char shaResult[32];
+  
+  mbedtls_sha256_context ctx;
+  mbedtls_sha256_init(&ctx);
+  mbedtls_sha256_starts_ret(&ctx, 0); // 0 for SHA-256
+  mbedtls_sha256_update_ret(&ctx, (const unsigned char*)input.c_str(), input.length());
+  mbedtls_sha256_finish_ret(&ctx, shaResult);
+  mbedtls_sha256_free(&ctx);
+  
+  String hashStr = "";
+  for (int i = 0; i < 32; i++) {
+    char buf[3];
+    sprintf(buf, "%02x", shaResult[i]);
+    hashStr += buf;
+  }
+  return hashStr;
+}
 String backupMode = "NORMAL";
 
 // For History Tracking
@@ -795,10 +817,23 @@ Serial.println(status);
       ledStatus
     );
 
+    String timestampStr = getTimeStamp();
     success &= Firebase.RTDB.setString(
       &fbdo,
       timePath.c_str(),
-      getTimeStamp()
+      timestampStr.c_str()
+    );
+
+    // Cryptographic Data Integrity Signature (SHA-256)
+    String dataToHash = String(distance, 2) + String(waterValue) + status + ledStatus + timestampStr;
+    String recordHash = calculateSHA256(dataToHash, "FloodSecuritySalt123!");
+
+    String hashPath = historyPath;
+    hashPath += "/hash";
+    success &= Firebase.RTDB.setString(
+      &fbdo,
+      hashPath.c_str(),
+      recordHash.c_str()
     );
 
     lastHistorySave = millis();

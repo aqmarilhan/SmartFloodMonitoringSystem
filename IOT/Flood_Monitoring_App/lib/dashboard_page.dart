@@ -8,6 +8,7 @@ import 'rating_page.dart';
 import 'register_vehicle_page.dart';
 import 'vehicle_location_page.dart';
 import 'emergency_contact_page.dart';
+import 'flood_risk_map_page.dart';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -685,7 +686,7 @@ class _DashboardPageState extends State<DashboardPage> {
               buildDashboardCard(
                 icon: Icons.location_on_rounded,
                 title: "Vehicle Location",
-                subtitle: "Save vehicle GPS location and view flood risk map",
+                subtitle: "Save and track your vehicle GPS coordinates",
                 color: Colors.indigo,
                 isDarkMode: isDarkMode,
                 onTap: () {
@@ -693,6 +694,22 @@ class _DashboardPageState extends State<DashboardPage> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => const VehicleLocationPage(),
+                    ),
+                  );
+                },
+              ),
+
+              buildDashboardCard(
+                icon: Icons.explore_rounded,
+                title: "Flood Risk Map",
+                subtitle: "Monitor active river sensor locations on a map",
+                color: Colors.blueAccent,
+                isDarkMode: isDarkMode,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FloodRiskMapPage(),
                     ),
                   );
                 },
