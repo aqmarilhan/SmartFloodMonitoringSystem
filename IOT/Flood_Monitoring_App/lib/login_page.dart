@@ -275,11 +275,11 @@ class _LoginPageState extends State<LoginPage> {
         Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: getBackgroundColor(isDarkMode),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        backgroundColor: getBackgroundColor(isDarkMode),
-        foregroundColor: getMainTextColor(isDarkMode),
+        scrolledUnderElevation: 0,
         actions: [
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
@@ -288,6 +288,7 @@ class _LoginPageState extends State<LoginPage> {
                   themeProvider.isDarkMode
                       ? Icons.light_mode
                       : Icons.dark_mode,
+                  color: getMainTextColor(isDarkMode),
                 ),
                 onPressed: () {
                   themeProvider.toggleTheme(!themeProvider.isDarkMode);
@@ -297,237 +298,322 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: getCardColor(isDarkMode),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(
-                      isDarkMode ? 0.30 : 0.10,
-                    ),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+                    const Color(0xFF0F172A),
+                    const Color(0xFF070B13),
+                    const Color(0xFF1E152A),
+                  ]
+                : [
+                    const Color(0xFFE0F2FE),
+                    Colors.white,
+                    const Color(0xFFF1F5F9),
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Container(
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: isDarkMode
+                      ? const Color(0xFF1E293B).withOpacity(0.85)
+                      : Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(
+                    color: isDarkMode
+                        ? Colors.white.withOpacity(0.08)
+                        : Colors.white.withOpacity(0.5),
+                    width: 1.5,
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Image.asset(
-                    'assets/images/flood_logo.png',
-                    width: MediaQuery.of(context).size.width * 0.48,
-                    height: MediaQuery.of(context).size.width * 0.48,
-                    fit: BoxFit.contain,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Text(
-                    "Welcome Back",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      color: getMainTextColor(isDarkMode),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDarkMode
+                          ? Colors.black.withOpacity(0.4)
+                          : Colors.black.withOpacity(0.05),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
                     ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text(
-                    "Smart Flood Early Warning Car System",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: getSubTextColor(isDarkMode),
-                      fontStyle: FontStyle.italic,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  TextField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    style: TextStyle(
-                      color: getMainTextColor(isDarkMode),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: "Email",
-                      prefixIcon: const Icon(Icons.email),
-                      filled: true,
-                      fillColor: isDarkMode
-                          ? const Color(0xFF0F172A)
-                          : Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  TextField(
-                    controller: passwordController,
-                    obscureText: obscurePassword,
-                    style: TextStyle(
-                      color: getMainTextColor(isDarkMode),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            obscurePassword = !obscurePassword;
-                          });
-                        },
-                      ),
-                      filled: true,
-                      fillColor: isDarkMode
-                          ? const Color(0xFF0F172A)
-                          : Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              "Login",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-                          thickness: 1,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          "OR",
-                          style: TextStyle(
-                            color: getSubTextColor(isDarkMode),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-                          thickness: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: OutlinedButton(
-                      onPressed: isLoading ? null : signInWithGoogle,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        backgroundColor: isDarkMode ? const Color(0xFF0F172A) : Colors.white,
-                        foregroundColor: getMainTextColor(isDarkMode),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.network(
-                            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/480px-Google_%22G%22_logo.svg.png',
-                            height: 24,
-                            width: 24,
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, size: 28),
-                          ),
-                          const SizedBox(width: 12),
-                          const Text(
-                            "Sign in with Google",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDarkMode
+                                ? const Color(0xFF06B6D4).withOpacity(0.18)
+                                : const Color(0xFF0284C7).withOpacity(0.12),
+                            blurRadius: 24,
+                            spreadRadius: 2,
                           ),
                         ],
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const SignupPage(),
-                              ),
-                            );
-                          },
-                    child: const Text(
-                      "Don't have an account? Sign Up",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/flood_logo.png',
+                          width: MediaQuery.of(context).size.width * 0.38,
+                          height: MediaQuery.of(context).size.width * 0.38,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 20),
+
+                    Text(
+                      "Welcome Back",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: getMainTextColor(isDarkMode),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    Text(
+                      "Smart Flood Early Warning Car System",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: getSubTextColor(isDarkMode),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: TextStyle(
+                        color: getMainTextColor(isDarkMode),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: "Email",
+                        labelStyle: TextStyle(
+                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                        ),
+                        filled: true,
+                        fillColor: isDarkMode
+                            ? const Color(0xFF0F172A).withOpacity(0.5)
+                            : Colors.grey.shade100,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(
+                            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(
+                            color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscurePassword,
+                      style: TextStyle(
+                        color: getMainTextColor(isDarkMode),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        labelStyle: TextStyle(
+                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.lock_outline_rounded,
+                          color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              obscurePassword = !obscurePassword;
+                            });
+                          },
+                        ),
+                        filled: true,
+                        fillColor: isDarkMode
+                            ? const Color(0xFF0F172A).withOpacity(0.5)
+                            : Colors.grey.shade100,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(
+                            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(
+                            color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                          foregroundColor: isDarkMode ? Colors.black : Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: isLoading
+                            ? SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: isDarkMode ? Colors.black : Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                "Login",
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+                            thickness: 1,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            "OR",
+                            style: TextStyle(
+                              color: getSubTextColor(isDarkMode).withOpacity(0.8),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+                            thickness: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: OutlinedButton(
+                        onPressed: isLoading ? null : signInWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          backgroundColor: isDarkMode ? const Color(0xFF0B0F19) : Colors.white,
+                          foregroundColor: getMainTextColor(isDarkMode),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.network(
+                              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/480px-Google_%22G%22_logo.svg.png',
+                              height: 22,
+                              width: 22,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, size: 28),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              "Sign in with Google",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextButton(
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SignupPage(),
+                                ),
+                              );
+                            },
+                      child: Text(
+                        "Don't have an account? Sign Up",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

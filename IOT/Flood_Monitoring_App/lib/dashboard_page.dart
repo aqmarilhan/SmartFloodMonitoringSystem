@@ -30,6 +30,7 @@ class _DashboardPageState extends State<DashboardPage> {
   int warningCount = 0;
   int dangerousCount = 0;
   bool isAdmin = false;
+  String currentFloodStatus = "SAFE";
 
   String lastSync = DateTime.now().toString().substring(0, 19);
 
@@ -49,6 +50,21 @@ class _DashboardPageState extends State<DashboardPage> {
     checkAdminAccess();
     listenToHistory();
     listenToRatings();
+    listenToFloodStatus();
+  }
+
+  void listenToFloodStatus() {
+    database.ref("FloodMonitoring").onValue.listen((event) {
+      final data = event.snapshot.value;
+      if (data != null && data is Map) {
+        final floodMap = Map<dynamic, dynamic>.from(data);
+        final status = floodMap["flood_status"]?.toString() ?? "SAFE";
+        if (!mounted) return;
+        setState(() {
+          currentFloodStatus = status;
+        });
+      }
+    });
   }
 
   Future<void> checkAdminAccess() async {
@@ -226,75 +242,147 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget buildHeroCard(bool isDarkMode) {
+    Color statusColor;
+    String statusLabel;
+    IconData statusIcon;
+    
+    if (currentFloodStatus == "DANGEROUS") {
+      statusColor = Colors.redAccent;
+      statusLabel = "DANGER DETECTED";
+      statusIcon = Icons.report_problem_rounded;
+    } else if (currentFloodStatus == "WARNING") {
+      statusColor = Colors.orangeAccent;
+      statusLabel = "WARNING ACTIVE";
+      statusIcon = Icons.warning_amber_rounded;
+    } else {
+      statusColor = isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7);
+      statusLabel = "SYSTEM SECURED";
+      statusIcon = Icons.shield_outlined;
+    }
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDarkMode
-              ? [
-                  const Color(0xFF1E3A8A),
-                  const Color(0xFF0F172A),
-                ]
-              : [
-                  Colors.lightBlue,
-                  Colors.blueAccent,
-                ],
-        ),
+        color: isDarkMode
+            ? const Color(0xFF1E293B).withOpacity(0.8)
+            : Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isDarkMode
+              ? const Color(0xFF334155)
+              : const Color(0xFFE2E8F0),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.30 : 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: isDarkMode
+                ? const Color(0xFF06B6D4).withOpacity(0.06)
+                : Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.water_drop,
-            size: 76,
-            color: Colors.white,
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            "Smart Flood Monitoring",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 27,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: statusColor.withOpacity(0.6),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: statusColor.withOpacity(0.2),
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "IoT-Based Smart Flood Early Warning Car System",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.white.withOpacity(0.85),
-              fontWeight: FontWeight.w500,
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: isDarkMode ? const Color(0xFF0B0F19) : Colors.white,
+              backgroundImage: const AssetImage('assets/images/flood_logo_icon.png'),
             ),
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 8,
+          Text(
+            "Smart Flood Monitoring",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              color: mainTextColor(isDarkMode),
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
             ),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(30),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "IoT-Based Flood Early Warning Car System",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: subTextColor(isDarkMode),
+              fontWeight: FontWeight.w500,
             ),
-            child: Text(
-              isAdmin ? "ADMIN ACCESS ENABLED" : "USER MODE",
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.8,
+          ),
+          const SizedBox(height: 18),
+          
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: statusColor.withOpacity(0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, size: 14, color: statusColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: (isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF4F46E5)).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: (isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF4F46E5)).withOpacity(0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  isAdmin ? "ADMIN" : "USER",
+                  style: TextStyle(
+                    color: isDarkMode ? const Color(0xFFC084FC) : const Color(0xFF4F46E5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -312,41 +400,58 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: cardColor(isDarkMode),
+          color: isDarkMode
+              ? const Color(0xFF1E293B).withOpacity(0.7)
+              : Colors.white.withOpacity(0.9),
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDarkMode
+                ? const Color(0xFF334155).withOpacity(0.6)
+                : const Color(0xFFE2E8F0),
+            width: 1.2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.08),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 27,
-              backgroundColor: color.withOpacity(0.15),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: color.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
               child: Icon(
                 icon,
                 color: color,
-                size: 30,
+                size: 26,
               ),
             ),
             const SizedBox(height: 12),
             Text(
               value,
               style: TextStyle(
-                fontSize: 30,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: mainTextColor(isDarkMode),
+                letterSpacing: -0.5,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               title,
               style: TextStyle(
                 color: subTextColor(isDarkMode),
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -367,36 +472,52 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: cardColor(isDarkMode),
+        color: isDarkMode
+            ? const Color(0xFF1E293B).withOpacity(0.7)
+            : Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDarkMode
+              ? const Color(0xFF334155).withOpacity(0.6)
+              : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 12,
+          horizontal: 20,
+          vertical: 10,
         ),
-        leading: CircleAvatar(
-          radius: 28,
-          backgroundColor: color.withOpacity(0.15),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
           child: Icon(
             icon,
             color: color,
-            size: 30,
+            size: 24,
           ),
         ),
         title: Text(
           title,
           style: TextStyle(
-            fontSize: 19,
+            fontSize: 17,
             fontWeight: FontWeight.bold,
             color: mainTextColor(isDarkMode),
+            letterSpacing: -0.2,
           ),
         ),
         subtitle: Padding(
@@ -405,13 +526,14 @@ class _DashboardPageState extends State<DashboardPage> {
             subtitle,
             style: TextStyle(
               color: subTextColor(isDarkMode),
+              fontSize: 13,
             ),
           ),
         ),
         trailing: Icon(
-          Icons.arrow_forward_ios,
-          color: subTextColor(isDarkMode),
-          size: 18,
+          Icons.arrow_forward_ios_rounded,
+          color: subTextColor(isDarkMode).withOpacity(0.7),
+          size: 16,
         ),
         onTap: onTap,
       ),
@@ -566,16 +688,20 @@ class _DashboardPageState extends State<DashboardPage> {
         SystemNavigator.pop();
       },
       child: Scaffold(
-        backgroundColor: backgroundColor(isDarkMode),
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
           elevation: 0,
-          backgroundColor: backgroundColor(isDarkMode),
+          scrolledUnderElevation: 0,
           foregroundColor: mainTextColor(isDarkMode),
-          title: const Text("Dashboard"),
+          title: const Text(
+            "Dashboard",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           centerTitle: true,
           actions: [
             IconButton(
-              icon: const Icon(Icons.person),
+              icon: const Icon(Icons.person_outline_rounded),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -586,197 +712,220 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.logout),
+              icon: const Icon(Icons.logout_rounded),
               onPressed: logout,
             ),
           ],
         ),
-        body: RefreshIndicator(
-          onRefresh: refreshData,
-          child: ListView(
-            padding: const EdgeInsets.all(18),
-            children: [
-              buildHeroCard(isDarkMode),
-
-              const SizedBox(height: 18),
-
-              Row(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDarkMode
+                  ? [
+                      const Color(0xFF0F172A),
+                      const Color(0xFF070B13),
+                      const Color(0xFF1E152A),
+                    ]
+                  : [
+                      const Color(0xFFE0F2FE),
+                      Colors.white,
+                      const Color(0xFFF1F5F9),
+                    ],
+            ),
+          ),
+          child: SafeArea(
+            child: RefreshIndicator(
+              onRefresh: refreshData,
+              child: ListView(
+                padding: const EdgeInsets.all(18),
                 children: [
-                  buildStatCard(
-                    icon: Icons.warning_amber_rounded,
-                    title: "Warnings",
-                    value: "$warningCount",
-                    color: Colors.orange,
-                    isDarkMode: isDarkMode,
+                  buildHeroCard(isDarkMode),
+
+                  const SizedBox(height: 18),
+
+                  Row(
+                    children: [
+                      buildStatCard(
+                        icon: Icons.warning_amber_rounded,
+                        title: "Warnings",
+                        value: "$warningCount",
+                        color: Colors.orange,
+                        isDarkMode: isDarkMode,
+                      ),
+                      const SizedBox(width: 14),
+                      buildStatCard(
+                        icon: Icons.dangerous_rounded,
+                        title: "Dangerous",
+                        value: "$dangerousCount",
+                        color: Colors.red,
+                        isDarkMode: isDarkMode,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 14),
-                  buildStatCard(
-                    icon: Icons.dangerous_rounded,
-                    title: "Dangerous",
-                    value: "$dangerousCount",
-                    color: Colors.red,
+
+                  const SizedBox(height: 20),
+
+                  if (isAdmin)
+                    buildDashboardCard(
+                      icon: Icons.admin_panel_settings_outlined,
+                      title: "Admin Panel",
+                      subtitle: "Manage users, thresholds and system logs",
+                      color: Colors.redAccent,
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AdminPage(),
+                          ),
+                        );
+                      },
+                    ),
+
+                  buildDashboardCard(
+                    icon: Icons.water_drop_outlined,
+                    title: "Monitoring",
+                    subtitle: "View live flood sensor readings",
+                    color: Colors.lightBlue,
                     isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FloodMonitoringPage(),
+                        ),
+                      );
+                    },
                   ),
+
+                  buildDashboardCard(
+                    icon: Icons.history_rounded,
+                    title: "History",
+                    subtitle: "View recorded flood events",
+                    color: Colors.deepPurple,
+                    isDarkMode: isDarkMode,
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HistoryPage(),
+                        ),
+                      );
+
+                      refreshData();
+                    },
+                  ),
+
+                  buildDashboardCard(
+                    icon: Icons.directions_car_outlined,
+                    title: "Register Vehicle",
+                    subtitle: "Add and manage your vehicle details",
+                    color: Colors.indigo,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterVehiclePage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  buildDashboardCard(
+                    icon: Icons.location_on_outlined,
+                    title: "Vehicle Location",
+                    subtitle: "Save and track your vehicle GPS coordinates",
+                    color: Colors.indigo,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VehicleLocationPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  buildDashboardCard(
+                    icon: Icons.explore_outlined,
+                    title: "Flood Risk Map",
+                    subtitle: "Monitor active river sensor locations on a map",
+                    color: Colors.blueAccent,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FloodRiskMapPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  buildDashboardCard(
+                    icon: Icons.show_chart_rounded,
+                    title: "Trend Analysis",
+                    subtitle: "Analyze flood risk over time",
+                    color: Colors.teal,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const TrendPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  buildDashboardCard(
+                    icon: Icons.contact_emergency_outlined,
+                    title: "Emergency Contact",
+                    subtitle: "Register and call emergency contact",
+                    color: Colors.redAccent,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EmergencyContactPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  buildDashboardCard(
+                    icon: Icons.star_outline_rounded,
+                    title: "Ratings",
+                    subtitle: "Review user feedback",
+                    color: Colors.amber,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RatingPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  buildSystemInfo(isDarkMode),
+
+                  const SizedBox(height: 16),
+
+                  buildRatingCard(isDarkMode),
                 ],
               ),
-
-              const SizedBox(height: 20),
-
-              if (isAdmin)
-                buildDashboardCard(
-                  icon: Icons.admin_panel_settings,
-                  title: "Admin Panel",
-                  subtitle: "Manage users, thresholds and system logs",
-                  color: Colors.redAccent,
-                  isDarkMode: isDarkMode,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AdminPage(),
-                      ),
-                    );
-                  },
-                ),
-
-              buildDashboardCard(
-                icon: Icons.water_drop,
-                title: "Monitoring",
-                subtitle: "View live flood sensor readings",
-                color: Colors.lightBlue,
-                isDarkMode: isDarkMode,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FloodMonitoringPage(),
-                    ),
-                  );
-                },
-              ),
-
-              buildDashboardCard(
-                icon: Icons.history,
-                title: "History",
-                subtitle: "View recorded flood events",
-                color: Colors.deepPurple,
-                isDarkMode: isDarkMode,
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const HistoryPage(),
-                    ),
-                  );
-
-                  refreshData();
-                },
-              ),
-
-              buildDashboardCard(
-                icon: Icons.directions_car,
-                title: "Register Vehicle",
-                subtitle: "Add and manage your vehicle details",
-                color: Colors.indigo,
-                isDarkMode: isDarkMode,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RegisterVehiclePage(),
-                    ),
-                  );
-                },
-              ),
-
-              buildDashboardCard(
-                icon: Icons.location_on_rounded,
-                title: "Vehicle Location",
-                subtitle: "Save and track your vehicle GPS coordinates",
-                color: Colors.indigo,
-                isDarkMode: isDarkMode,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const VehicleLocationPage(),
-                    ),
-                  );
-                },
-              ),
-
-              buildDashboardCard(
-                icon: Icons.explore_rounded,
-                title: "Flood Risk Map",
-                subtitle: "Monitor active river sensor locations on a map",
-                color: Colors.blueAccent,
-                isDarkMode: isDarkMode,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FloodRiskMapPage(),
-                    ),
-                  );
-                },
-              ),
-
-              buildDashboardCard(
-                icon: Icons.show_chart,
-                title: "Trend Analysis",
-                subtitle: "Analyze flood risk over time",
-                color: Colors.teal,
-                isDarkMode: isDarkMode,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TrendPage(),
-                    ),
-                  );
-                },
-              ),
-
-              buildDashboardCard(
-                icon: Icons.emergency_rounded,
-                title: "Emergency Contact",
-                subtitle: "Register and call emergency contact",
-                color: Colors.redAccent,
-                isDarkMode: isDarkMode,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const EmergencyContactPage(),
-                    ),
-                  );
-                },
-              ),
-
-              buildDashboardCard(
-                icon: Icons.star,
-                title: "Ratings",
-                subtitle: "Review user feedback",
-                color: Colors.amber,
-                isDarkMode: isDarkMode,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RatingPage(),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 6),
-
-              buildSystemInfo(isDarkMode),
-
-              const SizedBox(height: 16),
-
-              buildRatingCard(isDarkMode),
-            ],
+            ),
           ),
         ),
       ),

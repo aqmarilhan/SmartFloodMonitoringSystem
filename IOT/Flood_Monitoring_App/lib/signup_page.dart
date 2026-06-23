@@ -219,23 +219,29 @@ class _SignupPageState extends State<SignupPage> {
       ),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon),
+        labelStyle: TextStyle(
+          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+        ),
+        prefixIcon: Icon(
+          icon,
+          color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+        ),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: isDarkMode ? const Color(0xFF0F172A) : Colors.grey.shade100,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
+        fillColor: isDarkMode
+            ? const Color(0xFF0F172A).withOpacity(0.5)
+            : Colors.grey.shade100,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(
-            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+            width: 1,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(
-            color: Colors.lightBlue,
+          borderSide: BorderSide(
+            color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
             width: 2,
           ),
         ),
@@ -249,182 +255,223 @@ class _SignupPageState extends State<SignupPage> {
         Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: getBackgroundColor(isDarkMode),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        backgroundColor: getBackgroundColor(isDarkMode),
+        scrolledUnderElevation: 0,
         foregroundColor: getMainTextColor(isDarkMode),
-        title: const Text("Create Account"),
+        title: const Text(
+          "Create Account",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: getCardColor(isDarkMode),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(
-                      isDarkMode ? 0.30 : 0.10,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+                    const Color(0xFF0F172A),
+                    const Color(0xFF070B13),
+                    const Color(0xFF1E152A),
+                  ]
+                : [
+                    const Color(0xFFE0F2FE),
+                    Colors.white,
+                    const Color(0xFFF1F5F9),
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Container(
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: isDarkMode
+                      ? const Color(0xFF1E293B).withOpacity(0.85)
+                      : Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(
+                    color: isDarkMode
+                        ? Colors.white.withOpacity(0.08)
+                        : Colors.white.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDarkMode
+                          ? Colors.black.withOpacity(0.4)
+                          : Colors.black.withOpacity(0.05),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
                     ),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 48,
-                    backgroundColor: Colors.lightBlue.withOpacity(0.15),
-                    child: const Icon(
-                      Icons.person_add_alt_1,
-                      size: 55,
-                      color: Colors.lightBlue,
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  Text(
-                    "Create Your Account",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: getMainTextColor(isDarkMode),
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text(
-                    "Register to access the Smart Flood Monitoring System",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: getSubTextColor(isDarkMode),
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  buildTextField(
-                    controller: usernameController,
-                    label: "Username",
-                    icon: Icons.person,
-                    isDarkMode: isDarkMode,
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  buildTextField(
-                    controller: emailController,
-                    label: "Email",
-                    icon: Icons.email,
-                    keyboardType: TextInputType.emailAddress,
-                    isDarkMode: isDarkMode,
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  buildTextField(
-                    controller: passwordController,
-                    label: "Password",
-                    icon: Icons.lock,
-                    obscureText: obscurePassword,
-                    isDarkMode: isDarkMode,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 44,
+                      backgroundColor: isDarkMode
+                          ? const Color(0xFF06B6D4).withOpacity(0.15)
+                          : const Color(0xFF0284C7).withOpacity(0.12),
+                      child: Icon(
+                        Icons.person_add_alt_1_outlined,
+                        size: 48,
+                        color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
                       ),
-                      onPressed: () {
-                        setState(() {
-                          obscurePassword = !obscurePassword;
-                        });
-                      },
                     ),
-                  ),
 
-                  const SizedBox(height: 15),
+                    const SizedBox(height: 20),
 
-                  buildTextField(
-                    controller: confirmPasswordController,
-                    label: "Confirm Password",
-                    icon: Icons.lock_outline,
-                    obscureText: obscureConfirmPassword,
-                    isDarkMode: isDarkMode,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscureConfirmPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                    Text(
+                      "Create Your Account",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: getMainTextColor(isDarkMode),
+                        letterSpacing: -0.5,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          obscureConfirmPassword =
-                              !obscureConfirmPassword;
-                        });
-                      },
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 6),
 
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : signUp,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
+                    Text(
+                      "Register to access the Smart Flood Monitoring System",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: getSubTextColor(isDarkMode),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    buildTextField(
+                      controller: usernameController,
+                      label: "Username",
+                      icon: Icons.person_outline_rounded,
+                      isDarkMode: isDarkMode,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    buildTextField(
+                      controller: emailController,
+                      label: "Email",
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                      isDarkMode: isDarkMode,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    buildTextField(
+                      controller: passwordController,
+                      label: "Password",
+                      icon: Icons.lock_outline_rounded,
+                      obscureText: obscurePassword,
+                      isDarkMode: isDarkMode,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    buildTextField(
+                      controller: confirmPasswordController,
+                      label: "Confirm Password",
+                      icon: Icons.lock_clock_outlined,
+                      obscureText: obscureConfirmPassword,
+                      isDarkMode: isDarkMode,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureConfirmPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            obscureConfirmPassword = !obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : signUp,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                          foregroundColor: isDarkMode ? Colors.black : Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: isLoading
+                            ? SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: isDarkMode ? Colors.black : Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                "Sign Up",
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextButton(
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              Navigator.pop(context);
+                            },
+                      child: Text(
+                        "Already have an account? Login",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
                         ),
                       ),
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              "Sign Up",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
                     ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () {
-                            Navigator.pop(context);
-                          },
-                    child: const Text(
-                      "Already have an account? Login",
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

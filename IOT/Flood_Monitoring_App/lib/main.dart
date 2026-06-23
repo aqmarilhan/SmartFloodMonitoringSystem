@@ -199,20 +199,100 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
 
           theme: ThemeData(
-            scaffoldBackgroundColor: Colors.lightBlue.shade50,
-
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.lightBlue,
-              foregroundColor: Colors.white,
-              centerTitle: true,
+            useMaterial3: true,
+            brightness: Brightness.light,
+            primaryColor: const Color(0xFF0284C7),
+            scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF0284C7),
+              brightness: Brightness.light,
+              primary: const Color(0xFF0284C7),
+              secondary: const Color(0xFF4F46E5),
+              background: const Color(0xFFF8FAFC),
+              surface: Colors.white,
             ),
-
-            cardTheme: const CardThemeData(
-              elevation: 4,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              foregroundColor: Color(0xFF0F172A),
+              centerTitle: true,
+              titleTextStyle: TextStyle(
+                color: Color(0xFF0F172A),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            cardTheme: CardThemeData(
+              color: const Color(0xE6FFFFFF),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: const BorderSide(
+                  color: Color(0xFFE2E8F0),
+                  width: 1.5,
+                ),
+              ),
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                backgroundColor: const Color(0xFF0284C7),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
             ),
           ),
 
-          darkTheme: ThemeData.dark(),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.dark,
+            primaryColor: const Color(0xFF06B6D4),
+            scaffoldBackgroundColor: const Color(0xFF0B0F19),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF06B6D4),
+              brightness: Brightness.dark,
+              primary: const Color(0xFF06B6D4),
+              secondary: const Color(0xFF8B5CF6),
+              background: const Color(0xFF0B0F19),
+              surface: const Color(0xFF1E293B),
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              foregroundColor: Colors.white,
+              centerTitle: true,
+              titleTextStyle: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            cardTheme: CardThemeData(
+              color: const Color(0xFF1E293B),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: const BorderSide(
+                  color: Color(0xFF334155),
+                  width: 1.2,
+                ),
+              ),
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                backgroundColor: const Color(0xFF06B6D4),
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
+          ),
 
           themeMode: themeProvider.themeMode,
 

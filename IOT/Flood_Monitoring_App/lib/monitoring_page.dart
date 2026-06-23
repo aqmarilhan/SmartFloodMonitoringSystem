@@ -288,22 +288,21 @@ if (data != null && data is Map) {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDarkMode
-            ? const Color(0xFF1F2937)
-            : Colors.white,
+            ? const Color(0xFF1E293B).withOpacity(0.7)
+            : Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: color.withValues(alpha: 0.22),
+          color: color.withOpacity(0.35),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDarkMode ? 0.25 : 0.08,
-            ),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -311,15 +310,19 @@ if (data != null && data is Map) {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.16),
+              color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 1,
+              ),
             ),
             child: Icon(
               icon,
               color: color,
-              size: 30,
+              size: 26,
             ),
           ),
 
@@ -332,11 +335,10 @@ if (data != null && data is Map) {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: isDarkMode
-                        ? Colors.white
-                        : Colors.black87,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                    letterSpacing: -0.2,
                   ),
                 ),
 
@@ -345,9 +347,10 @@ if (data != null && data is Map) {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 30,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: color,
+                    letterSpacing: -0.5,
                   ),
                 ),
 
@@ -355,33 +358,36 @@ if (data != null && data is Map) {
 
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                    horizontal: 10,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.16),
+                    color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: color.withOpacity(0.4),
+                      width: 1,
+                    ),
                   ),
                   child: Text(
-                    condition,
+                    condition.toUpperCase(),
                     style: TextStyle(
                       color: color,
                       fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                      fontSize: 11,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
 
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    color: isDarkMode
-                        ? Colors.grey.shade300
-                        : Colors.grey.shade700,
+                    fontSize: 13,
+                    height: 1.45,
+                    color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
                   ),
                 ),
               ],
@@ -405,51 +411,56 @@ IconData getStatusIcon() {
 }
 
 Widget buildModernStatusHeader() {
+  Color statusColor = getStatusColor();
   return Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(22),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(28),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          getStatusColor(),
-          getStatusColor().withValues(alpha: 0.65),
+          statusColor,
+          statusColor.withOpacity(0.75),
         ],
       ),
       boxShadow: [
         BoxShadow(
-          color: getStatusColor().withValues(alpha: 0.35),
-          blurRadius: 18,
-          offset: const Offset(0, 8),
+          color: statusColor.withOpacity(0.35),
+          blurRadius: 20,
+          offset: const Offset(0, 10),
         ),
       ],
     ),
     child: Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.22),
+            color: Colors.white.withOpacity(0.2),
             shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1.5,
+            ),
           ),
           child: Icon(
             getStatusIcon(),
-            size: 60,
+            size: 55,
             color: Colors.white,
           ),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
 
         Text(
           floodStatus,
           style: const TextStyle(
-            fontSize: 34,
+            fontSize: 32,
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            letterSpacing: 1,
+            letterSpacing: 0.5,
           ),
         ),
 
@@ -459,7 +470,7 @@ Widget buildModernStatusHeader() {
           getStatusDescription(),
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 15,
+            fontSize: 14,
             height: 1.4,
             color: Colors.white,
           ),
@@ -474,17 +485,25 @@ Widget buildSensorGuideCard() {
       Theme.of(context).brightness == Brightness.dark;
 
   return Container(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
       color: isDarkMode
-          ? const Color(0xFF1E293B)
-          : Colors.blue.shade50,
-      borderRadius: BorderRadius.circular(22),
+          ? const Color(0xFF1E293B).withOpacity(0.7)
+          : Colors.white.withOpacity(0.9),
+      borderRadius: BorderRadius.circular(24),
       border: Border.all(
         color: isDarkMode
-            ? Colors.lightBlueAccent.withValues(alpha: 0.25)
-            : Colors.blue.withValues(alpha: 0.2),
+            ? Colors.lightBlueAccent.withOpacity(0.25)
+            : Colors.blue.withOpacity(0.2),
+        width: 1.2,
       ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,33 +512,51 @@ Widget buildSensorGuideCard() {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: isDarkMode
-                ? Colors.lightBlueAccent.withValues(alpha: 0.18)
-                : Colors.blue.withValues(alpha: 0.12),
+                ? Colors.lightBlueAccent.withOpacity(0.15)
+                : Colors.blue.withOpacity(0.12),
             shape: BoxShape.circle,
+            border: Border.all(
+              color: isDarkMode ? Colors.lightBlueAccent.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
+              width: 1,
+            ),
           ),
           child: Icon(
-            Icons.info_outline,
+            Icons.info_outline_rounded,
             color: isDarkMode
                 ? Colors.lightBlueAccent
                 : Colors.blue,
+            size: 22,
           ),
         ),
 
         const SizedBox(width: 14),
 
         Expanded(
-          child: Text(
-            "How to read the sensors:\n"
-            "• Lower distance means the water is rising.\n"
-            "• Higher water reading means more water is detected.\n"
-            "• Green means safe, orange means warning, and red means dangerous.",
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.45,
-              color: isDarkMode
-                  ? Colors.white
-                  : Colors.black87,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Sensor Diagnostics Guide",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "• Lower distance means the water is rising.\n"
+                "• Higher water reading means more water is detected.\n"
+                "• Green means safe, orange warning, and red dangerous.",
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: isDarkMode
+                      ? Colors.grey.shade300
+                      : Colors.grey.shade700,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -533,164 +570,221 @@ Widget buildSensorGuideCard() {
         Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode
-          ? const Color(0xFF0F172A)
-          : Colors.lightBlue.shade50,
-
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text("Smart Flood Monitoring"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        foregroundColor: isDarkMode ? Colors.white : Colors.black87,
+        title: const Text(
+          "Smart Flood Monitoring",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        elevation: 0,
       ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+                    const Color(0xFF0F172A),
+                    const Color(0xFF070B13),
+                    const Color(0xFF1E152A),
+                  ]
+                : [
+                    const Color(0xFFE0F2FE),
+                    Colors.white,
+                    const Color(0xFFF1F5F9),
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                buildModernStatusHeader(),
 
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              buildModernStatusHeader(),
+                const SizedBox(height: 18),
 
-              const SizedBox(height: 18),
+                buildSensorGuideCard(),
 
-              buildSensorGuideCard(),
+                const SizedBox(height: 18),
 
-              const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? const Color(0xFF1E293B).withOpacity(0.7)
+                        : Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: getStatusColor().withOpacity(0.35),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: getStatusColor().withOpacity(0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: getStatusColor().withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          getStatusIcon(),
+                          color: getStatusColor(),
+                        ),
+                      ),
 
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? const Color(0xFF1F2937)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: getStatusColor().withValues(alpha: 0.25),
+                      const SizedBox(width: 14),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Current Flood Status",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            Text(
+                              floodStatus,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: getStatusColor(),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: getStatusColor().withValues(alpha: 0.16),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        getStatusIcon(),
-                        color: getStatusColor(),
-                      ),
-                    ),
 
-                    const SizedBox(width: 14),
+                const SizedBox(height: 18),
 
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Current Flood Status",
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: isDarkMode
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade700,
-                            ),
-                          ),
-
-                          const SizedBox(height: 4),
-
-                          Text(
-                            floodStatus,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: getStatusColor(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                buildSensorInfoCard(
+                  icon: Icons.straighten_rounded,
+                  title: "Distance from Water",
+                  value:
+                      "${double.tryParse(distance)?.toStringAsFixed(2) ?? distance} cm",
+                  condition: getDistanceCondition(),
+                  description: getDistanceDescription(),
+                  color: getDistanceColor(),
                 ),
-              ),
 
-              const SizedBox(height: 18),
-
-              buildSensorInfoCard(
-                icon: Icons.straighten,
-                title: "Distance from Water",
-                value:
-                    "${double.tryParse(distance)?.toStringAsFixed(2) ?? distance} cm",
-                condition: getDistanceCondition(),
-                description: getDistanceDescription(),
-                color: getDistanceColor(),
-              ),
-
-              buildSensorInfoCard(
-                icon: Icons.water_drop,
-                title: "Water Sensor Reading",
-                value: waterLevel,
-                condition: getWaterCondition(),
-                description: getWaterDescription(),
-                color: getWaterColor(),
-              ),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? const Color(0xFF1F2937)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(22),
+                buildSensorInfoCard(
+                  icon: Icons.water_drop_outlined,
+                  title: "Water Sensor Reading",
+                  value: waterLevel,
+                  condition: getWaterCondition(),
+                  description: getWaterDescription(),
+                  color: getWaterColor(),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
+
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? const Color(0xFF1E293B).withOpacity(0.7)
+                        : Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
                       color: isDarkMode
-                          ? Colors.grey.shade300
-                          : Colors.grey.shade700,
+                          ? const Color(0xFF334155).withOpacity(0.6)
+                          : const Color(0xFFE2E8F0),
+                      width: 1.2,
                     ),
-
-                    const SizedBox(width: 12),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Last Updated",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: isDarkMode
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-
-                          const SizedBox(height: 4),
-
-                          Text(
-                            lastUpdated,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isDarkMode
-                                  ? Colors.white
-                                  : Colors.black87,
-                            ),
-                          ),
-                        ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: (isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF4F46E5)).withOpacity(0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: (isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF4F46E5)).withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.access_time_rounded,
+                          color: isDarkMode ? const Color(0xFFC084FC) : const Color(0xFF4F46E5),
+                        ),
+                      ),
+
+                      const SizedBox(width: 14),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Last Updated",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            Text(
+                              lastUpdated,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDarkMode
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
