@@ -557,8 +557,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: buildHeader(isDarkMode),
                 ),
                 Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(18),
+                  child: RefreshIndicator(
+                    onRefresh: loadUserData,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(18),
                     children: [
                       buildInfoCard(
                         icon: Icons.person,
@@ -618,6 +621,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                 ),
+              ),
               ],
             ),
     );

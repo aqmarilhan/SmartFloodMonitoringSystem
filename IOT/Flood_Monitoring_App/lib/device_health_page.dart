@@ -371,9 +371,13 @@ class DeviceHealthPage extends StatelessWidget {
         title: const Text("Device Health"),
         centerTitle: true,
       ),
-      body: StreamBuilder<DatabaseEvent>(
-        stream: deviceRef.onValue,
-        builder: (context, snapshot) {
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        child: StreamBuilder<DatabaseEvent>(
+          stream: deviceRef.onValue,
+          builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
               child: Padding(
@@ -413,6 +417,7 @@ class DeviceHealthPage extends StatelessWidget {
           final currentStatus = getText(data, "current_status");
 
           return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(18),
             children: [
               buildHeader(
@@ -478,6 +483,7 @@ class DeviceHealthPage extends StatelessWidget {
           );
         },
       ),
+          ),
     );
   }
 }

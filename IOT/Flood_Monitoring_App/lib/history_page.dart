@@ -261,8 +261,12 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
         ],
       ),
-      body: StreamBuilder<DatabaseEvent>(
-      stream: historyRef.limitToLast(100).onValue,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {});
+        },
+        child: StreamBuilder<DatabaseEvent>(
+          stream: historyRef.limitToLast(100).onValue,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
@@ -431,6 +435,7 @@ class _HistoryPageState extends State<HistoryPage> {
           );
         },
       ),
+          ),
     );
   }
 }

@@ -382,9 +382,12 @@ class _RatingPageState extends State<RatingPage> {
           ? const Center(
               child: CircularProgressIndicator(),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(18),
-              child: Column(
+          : RefreshIndicator(
+              onRefresh: loadRating,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(18),
+                child: Column(
                 children: [
                   buildHeader(isDarkMode),
 
@@ -432,6 +435,7 @@ class _RatingPageState extends State<RatingPage> {
                 ],
               ),
             ),
+          ),
     );
   }
 }

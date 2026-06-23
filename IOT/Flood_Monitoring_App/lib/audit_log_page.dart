@@ -361,7 +361,11 @@ class AuditLogPage extends StatelessWidget {
         title: const Text("Audit Logs"),
         centerTitle: true,
       ),
-      body: StreamBuilder<DatabaseEvent>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        child: StreamBuilder<DatabaseEvent>(
         stream: auditRef
             .orderByChild("createdAtEpoch")
             .limitToLast(50)
@@ -409,6 +413,7 @@ class AuditLogPage extends StatelessWidget {
           });
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(18),
             itemCount: logs.length + 1,
             itemBuilder: (context, index) {
@@ -431,6 +436,7 @@ class AuditLogPage extends StatelessWidget {
           );
         },
       ),
+          ),
     );
   }
 }

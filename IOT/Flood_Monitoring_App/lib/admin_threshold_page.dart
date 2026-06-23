@@ -442,9 +442,12 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
           ? const Center(
               child: CircularProgressIndicator(),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(18),
-              child: Column(
+          : RefreshIndicator(
+              onRefresh: loadSettings,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(18),
+                child: Column(
                 children: [
                   buildHeader(isDarkMode),
 
@@ -533,6 +536,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
                 ],
               ),
             ),
+          ),
     );
   }
 }

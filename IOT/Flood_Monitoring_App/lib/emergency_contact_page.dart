@@ -12,10 +12,14 @@ class EmergencyContactPage extends StatefulWidget {
 }
 
 class _EmergencyContactPageState extends State<EmergencyContactPage> {
-  final nameController = TextEditingController();
-  final phoneController = TextEditingController();
-  final relationshipController = TextEditingController();
+  final List<TextEditingController> nameControllers =
+      List.generate(3, (_) => TextEditingController());
+  final List<TextEditingController> phoneControllers =
+      List.generate(3, (_) => TextEditingController());
+  final List<TextEditingController> relationshipControllers =
+      List.generate(3, (_) => TextEditingController());
 
+  int activeContactIndex = 0;
   bool isLoading = true;
   bool isSaving = false;
 
@@ -53,17 +57,55 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     try {
       final snapshot = await contactRef.get().timeout(const Duration(seconds: 10));
 
+      for (int i = 0; i < 3; i++) {
+        nameControllers[i].clear();
+        phoneControllers[i].clear();
+        relationshipControllers[i].clear();
+      }
+      activeContactIndex = 0;
+
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<dynamic, dynamic>.from(snapshot.value as Map);
 
-        nameController.text = data["name"]?.toString() ?? "";
-        phoneController.text = data["phone"]?.toString() ?? "";
-        relationshipController.text =
-            data["relationship"]?.toString() ?? "";
+        // Check if this is the old schema (single contact at root)
+        if (data.containsKey("name") && data["name"] != null) {
+          nameControllers[0].text = data["name"]?.toString() ?? "";
+          phoneControllers[0].text = data["phone"]?.toString() ?? "";
+          relationshipControllers[0].text =
+              data["relationship"]?.toString() ?? "";
+          activeContactIndex = 0;
+
+          // Migrate to new schema in the background
+          await migrateToNewSchema(
+            nameControllers[0].text,
+            phoneControllers[0].text,
+            relationshipControllers[0].text,
+          );
+        } else {
+          // New multi-contact schema
+          activeContactIndex =
+              int.tryParse(data["activeContactIndex"]?.toString() ?? "0") ?? 0;
+          if (activeContactIndex < 0 || activeContactIndex > 2) {
+            activeContactIndex = 0;
+          }
+
+          if (data["contacts"] != null) {
+            final contactsList = List<dynamic>.from(data["contacts"]);
+            for (int i = 0; i < contactsList.length && i < 3; i++) {
+              if (contactsList[i] != null) {
+                final contact = Map<dynamic, dynamic>.from(contactsList[i]);
+                nameControllers[i].text = contact["name"]?.toString() ?? "";
+                phoneControllers[i].text = contact["phone"]?.toString() ?? "";
+                relationshipControllers[i].text =
+                    contact["relationship"]?.toString() ?? "";
+              }
+            }
+          }
+        }
       }
     } catch (e) {
       if (!mounted) return;
-      showMessage("Failed to load contact: $e");
+      showMessage("Failed to load contacts: $e");
     }
 
     if (!mounted) return;
@@ -71,6 +113,40 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     setState(() {
       isLoading = false;
     });
+  }
+
+  Future<void> migrateToNewSchema(
+      String name, String phone, String relationship) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      await contactRef.set({
+        "uid": user!.uid,
+        "email": user.email ?? "Unknown email",
+        "activeContactIndex": 0,
+        "contacts": [
+          {
+            "name": name,
+            "phone": phone,
+            "relationship": relationship,
+          },
+          {
+            "name": "",
+            "phone": "",
+            "relationship": "",
+          },
+          {
+            "name": "",
+            "phone": "",
+            "relationship": "",
+          }
+        ],
+        "updatedAt": DateTime.now().toString(),
+        "updatedAtEpoch": DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      });
+      debugPrint("Successfully migrated to multi-contact schema.");
+    } catch (e) {
+      debugPrint("Migration failed: $e");
+    }
   }
 
   Future<void> saveContact() async {
@@ -81,17 +157,20 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
       return;
     }
 
-    final name = nameController.text.trim();
-    final phone = phoneController.text.trim();
-    final relationship = relationshipController.text.trim();
+    // Validate active contact is filled
+    final activeName = nameControllers[activeContactIndex].text.trim();
+    final activePhone = phoneControllers[activeContactIndex].text.trim();
+    final activeRelationship =
+        relationshipControllers[activeContactIndex].text.trim();
 
-    if (name.isEmpty || phone.isEmpty || relationship.isEmpty) {
-      showMessage("Please fill all emergency contact details.");
+    if (activeName.isEmpty || activePhone.isEmpty || activeRelationship.isEmpty) {
+      showMessage(
+          "Please fill details for the active contact (Contact ${activeContactIndex + 1}).");
       return;
     }
 
-    if (phone.length < 9) {
-      showMessage("Please enter a valid phone number.");
+    if (activePhone.length < 9) {
+      showMessage("Active contact's phone number must be valid.");
       return;
     }
 
@@ -100,12 +179,20 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     });
 
     try {
+      final contactsData = <Map<String, String>>[];
+      for (int i = 0; i < 3; i++) {
+        contactsData.add({
+          "name": nameControllers[i].text.trim(),
+          "phone": phoneControllers[i].text.trim(),
+          "relationship": relationshipControllers[i].text.trim(),
+        });
+      }
+
       await contactRef.set({
         "uid": user.uid,
         "email": user.email ?? "Unknown email",
-        "name": name,
-        "phone": phone,
-        "relationship": relationship,
+        "activeContactIndex": activeContactIndex,
+        "contacts": contactsData,
         "updatedAt": DateTime.now().toString(),
         "updatedAtEpoch": DateTime.now().millisecondsSinceEpoch ~/ 1000,
       });
@@ -116,7 +203,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
         isSaving = false;
       });
 
-      showMessage("Emergency contact saved successfully.");
+      showMessage("Emergency contacts saved successfully.");
     } catch (e) {
       if (!mounted) return;
 
@@ -124,15 +211,15 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
         isSaving = false;
       });
 
-      showMessage("Failed to save contact: $e");
+      showMessage("Failed to save contacts: $e");
     }
   }
 
   Future<void> callEmergencyContact() async {
-    final phone = phoneController.text.trim();
+    final phone = phoneControllers[activeContactIndex].text.trim();
 
     if (phone.isEmpty) {
-      showMessage("No emergency phone number saved.");
+      showMessage("No active emergency phone number saved.");
       return;
     }
 
@@ -218,7 +305,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
   Widget buildHeader(bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
@@ -236,7 +323,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.18),
               shape: BoxShape.circle,
@@ -244,26 +331,26 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
             child: const Icon(
               Icons.emergency_rounded,
               color: Colors.white,
-              size: 70,
+              size: 50,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           const Text(
-            "Emergency Contact",
+            "Emergency Contacts",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            "Save a contact that can be called quickly during dangerous flood conditions",
+            "Save up to 3 emergency contacts and select the active one below",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15,
-              height: 1.4,
+              fontSize: 14,
+              height: 1.3,
               color: Colors.white.withOpacity(0.88),
             ),
           ),
@@ -272,11 +359,71 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
     );
   }
 
+  Widget buildContactForm(int index, bool isDarkMode) {
+    return RefreshIndicator(
+      onRefresh: loadContact,
+      color: Colors.redAccent,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            RadioListTile<int>(
+              title: Text(
+                "Active Contact",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: activeContactIndex == index
+                      ? Colors.redAccent
+                      : getMainTextColor(isDarkMode),
+                ),
+              ),
+              subtitle: const Text("Select this contact to dial in emergencies"),
+              value: index,
+              groupValue: activeContactIndex,
+              activeColor: Colors.redAccent,
+              onChanged: (val) {
+                setState(() {
+                  activeContactIndex = val!;
+                });
+              },
+            ),
+            const Divider(),
+            const SizedBox(height: 12),
+            buildTextField(
+              controller: nameControllers[index],
+              label: "Contact Name",
+              icon: Icons.person_rounded,
+              isDarkMode: isDarkMode,
+            ),
+            buildTextField(
+              controller: phoneControllers[index],
+              label: "Phone Number",
+              icon: Icons.phone_rounded,
+              keyboardType: TextInputType.phone,
+              isDarkMode: isDarkMode,
+            ),
+            buildTextField(
+              controller: relationshipControllers[index],
+              label: "Relationship",
+              icon: Icons.family_restroom_rounded,
+              isDarkMode: isDarkMode,
+            ),
+            const SizedBox(height: 40), // extra padding for pull-to-refresh feel
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    nameController.dispose();
-    phoneController.dispose();
-    relationshipController.dispose();
+    for (int i = 0; i < 3; i++) {
+      nameControllers[i].dispose();
+      phoneControllers[i].dispose();
+      relationshipControllers[i].dispose();
+    }
     super.dispose();
   }
 
@@ -284,96 +431,116 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: getBackgroundColor(isDarkMode),
-      appBar: AppBar(
-        elevation: 0,
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
         backgroundColor: getBackgroundColor(isDarkMode),
-        foregroundColor: getMainTextColor(isDarkMode),
-        title: const Text("Emergency Contact"),
-        centerTitle: true,
-      ),
-      body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(18),
-              children: [
-                buildHeader(isDarkMode),
-
-                const SizedBox(height: 18),
-
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: getCardColor(isDarkMode),
-                    borderRadius: BorderRadius.circular(24),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: getBackgroundColor(isDarkMode),
+          foregroundColor: getMainTextColor(isDarkMode),
+          title: const Text("Emergency Contacts"),
+          centerTitle: true,
+          bottom: TabBar(
+            labelColor: isDarkMode ? Colors.white : Colors.redAccent,
+            unselectedLabelColor: getSubTextColor(isDarkMode),
+            indicatorColor: Colors.redAccent,
+            tabs: const [
+              Tab(text: "Contact 1"),
+              Tab(text: "Contact 2"),
+              Tab(text: "Contact 3"),
+            ],
+          ),
+        ),
+        body: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: buildHeader(isDarkMode),
                   ),
-                  child: Column(
-                    children: [
-                      buildTextField(
-                        controller: nameController,
-                        label: "Contact Name",
-                        icon: Icons.person_rounded,
-                        isDarkMode: isDarkMode,
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: getCardColor(isDarkMode),
+                        borderRadius:
+                            const BorderRadius.vertical(top: Radius.circular(24)),
                       ),
-                      buildTextField(
-                        controller: phoneController,
-                        label: "Phone Number",
-                        icon: Icons.phone_rounded,
-                        keyboardType: TextInputType.phone,
-                        isDarkMode: isDarkMode,
+                      child: TabBarView(
+                        children: [
+                          buildContactForm(0, isDarkMode),
+                          buildContactForm(1, isDarkMode),
+                          buildContactForm(2, isDarkMode),
+                        ],
                       ),
-                      buildTextField(
-                        controller: relationshipController,
-                        label: "Relationship",
-                        icon: Icons.family_restroom_rounded,
-                        isDarkMode: isDarkMode,
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton.icon(
-                          onPressed: isSaving ? null : saveContact,
-                          icon: isSaving
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.save_rounded),
-                          label: Text(
-                            isSaving ? "Saving..." : "Save Contact",
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  Container(
+                    color: getCardColor(isDarkMode),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            onPressed: isSaving ? null : saveContact,
+                            icon: isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.save_rounded),
+                            label: const Text(
+                              "Save All Contacts",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: OutlinedButton.icon(
-                          onPressed: callEmergencyContact,
-                          icon: const Icon(Icons.call_rounded),
-                          label: const Text("Call Emergency Contact"),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: OutlinedButton.icon(
+                            onPressed: callEmergencyContact,
+                            icon: const Icon(Icons.call_rounded),
+                            label: Text(
+                              "Call Active Contact (Contact ${activeContactIndex + 1})",
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                              side: const BorderSide(
+                                  color: Colors.redAccent, width: 2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 }

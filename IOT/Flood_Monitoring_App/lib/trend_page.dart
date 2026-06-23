@@ -183,9 +183,13 @@ class TrendPage extends StatelessWidget {
         title: const Text("Flood Trend Analysis"),
         centerTitle: true,
       ),
-      body: StreamBuilder<DatabaseEvent>(
-        stream: historyRef.limitToLast(20).onValue,
-        builder: (context, snapshot) {
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        child: StreamBuilder<DatabaseEvent>(
+          stream: historyRef.limitToLast(20).onValue,
+          builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
               child: Padding(
@@ -296,6 +300,7 @@ class TrendPage extends StatelessWidget {
               spots.length <= 5 ? 1 : (spots.length / 4).ceil();
 
           return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
@@ -708,6 +713,7 @@ class TrendPage extends StatelessWidget {
           );
         },
       ),
+          ),
     );
   }
 }

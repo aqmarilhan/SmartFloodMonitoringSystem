@@ -817,8 +817,11 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
           ? const Center(
               child: CircularProgressIndicator(),
             )
-          : ListView(
-              padding: const EdgeInsets.all(18),
+          : RefreshIndicator(
+              onRefresh: loadVehicles,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(18),
               children: [
                 buildHeader(isDarkMode),
                 const SizedBox(height: 18),
@@ -831,6 +834,7 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
                     : buildVehicleInfo(isDarkMode),
               ],
             ),
+          ),
     );
   }
 }

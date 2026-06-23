@@ -742,8 +742,13 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
         title: const Text("Register Vehicle"),
         centerTitle: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(18),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {});
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(18),
         children: [
           buildHeader(isDarkMode),
 
@@ -767,6 +772,7 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
           buildVehicleList(isDarkMode),
         ],
       ),
+          ),
     );
   }
 }
