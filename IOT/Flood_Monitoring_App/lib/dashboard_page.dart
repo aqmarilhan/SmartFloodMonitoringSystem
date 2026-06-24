@@ -305,7 +305,7 @@ class _DashboardPageState extends State<DashboardPage> {
               radius: 40,
               backgroundColor: isDarkMode ? const Color(0xFF0B0F19) : Colors.white,
               child: Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(2.0),
                 child: Image.asset(
                   'assets/images/flood_logo_icon.png',
                   fit: BoxFit.contain,
