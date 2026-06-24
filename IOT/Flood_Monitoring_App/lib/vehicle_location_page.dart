@@ -5,6 +5,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:io';
+import 'dart:convert';
 
 class VehicleLocationPage extends StatefulWidget {
   const VehicleLocationPage({super.key});
@@ -19,9 +21,12 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
 
   bool isLoading = true;
   bool isSavingLocation = false;
+  bool isSearchingAddress = false;
 
   Map<String, dynamic> vehicles = {};
   String? selectedVehicleId;
+
+  final addressController = TextEditingController();
 
   final double defaultLatitude = 1.5586;
   final double defaultLongitude = 103.6375;
@@ -47,6 +52,7 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
   @override
   void dispose() {
     _mapController?.dispose();
+    addressController.dispose();
     super.dispose();
   }
 
@@ -186,6 +192,80 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
     );
   }
 
+  Future<LatLng?> _geocodeAddress(String address) async {
+    try {
+      final client = HttpClient();
+      final uri = Uri.parse("https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(address)}&format=json&limit=1");
+      final request = await client.getUrl(uri);
+      request.headers.set(HttpHeaders.userAgentHeader, "SmartFloodEarlyWarningApp/1.0");
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        final content = await response.transform(utf8.decoder).join();
+        final json = jsonDecode(content);
+        if (json is List && json.isNotEmpty) {
+          final lat = double.tryParse(json[0]["lat"]?.toString() ?? "");
+          final lon = double.tryParse(json[0]["lon"]?.toString() ?? "");
+          if (lat != null && lon != null) {
+            return LatLng(lat, lon);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Geocoding error: $e");
+    }
+    return null;
+  }
+
+  Future<String?> _reverseGeocode(double lat, double lon) async {
+    try {
+      final client = HttpClient();
+      final uri = Uri.parse("https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lon&format=json");
+      final request = await client.getUrl(uri);
+      request.headers.set(HttpHeaders.userAgentHeader, "SmartFloodEarlyWarningApp/1.0");
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        final content = await response.transform(utf8.decoder).join();
+        final json = jsonDecode(content);
+        if (json is Map && json.containsKey("display_name")) {
+          return json["display_name"]?.toString();
+        }
+      }
+    } catch (e) {
+      debugPrint("Reverse geocoding error: $e");
+    }
+    return null;
+  }
+
+  Future<void> searchAndSetAddress() async {
+    final address = addressController.text.trim();
+    if (address.isEmpty) {
+      showMessage("Please enter an address first.");
+      return;
+    }
+
+    setState(() {
+      isSearchingAddress = true;
+    });
+
+    final latLng = await _geocodeAddress(address);
+
+    if (!mounted) return;
+
+    setState(() {
+      isSearchingAddress = false;
+    });
+
+    if (latLng != null) {
+      setState(() {
+        tappedLatLng = latLng;
+      });
+      _updateMapCamera();
+      showMessage("Location found! Tap 'Save Selected Location' to confirm.");
+    } else {
+      showMessage("Address not found. Please try a different search.");
+    }
+  }
+
   Future<void> saveCurrentLocation() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -216,11 +296,18 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
         return;
       }
 
+      String parkingLocation = "Current GPS Location";
+      final address = await _reverseGeocode(position.latitude, position.longitude);
+      if (address != null && address.isNotEmpty) {
+        parkingLocation = address;
+      }
+
       final ref = database.ref("Vehicles/${user.uid}/$selectedVehicleId");
 
       await ref.update({
         "latitude": position.latitude,
         "longitude": position.longitude,
+        "parkingLocation": parkingLocation,
         "locationUpdatedAt": DateTime.now().toString(),
         "locationUpdatedAtEpoch": DateTime.now().millisecondsSinceEpoch ~/ 1000,
       });
@@ -268,11 +355,18 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
     });
 
     try {
+      String parkingLocation = "Custom Pin Location";
+      final address = await _reverseGeocode(tappedLatLng!.latitude, tappedLatLng!.longitude);
+      if (address != null && address.isNotEmpty) {
+        parkingLocation = address;
+      }
+
       final ref = database.ref("Vehicles/${user.uid}/$selectedVehicleId");
 
       await ref.update({
         "latitude": tappedLatLng!.latitude,
         "longitude": tappedLatLng!.longitude,
+        "parkingLocation": parkingLocation,
         "locationUpdatedAt": DateTime.now().toString(),
         "locationUpdatedAtEpoch": DateTime.now().millisecondsSinceEpoch ~/ 1000,
       });
@@ -547,6 +641,70 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
             },
           ),
           const SizedBox(height: 16),
+          // Set Location by Address Input
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: addressController,
+                  style: TextStyle(
+                    color: getMainTextColor(isDarkMode),
+                  ),
+                  decoration: InputDecoration(
+                    labelText: "Set location by address",
+                    hintText: "Type an address...",
+                    hintStyle: TextStyle(
+                      color: getSubTextColor(isDarkMode).withOpacity(0.6),
+                    ),
+                    prefixIcon: const Icon(Icons.location_on_rounded),
+                    filled: true,
+                    fillColor: isDarkMode
+                        ? const Color(0xFF0F172A)
+                        : Colors.grey.shade100,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide(
+                        color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide(
+                        color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: isSearchingAddress ? null : searchAndSetAddress,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.lightBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: isSearchingAddress
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.search_rounded),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           if (tappedLatLng != null) ...[
             SizedBox(
               width: double.infinity,
@@ -563,7 +721,7 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
                         ),
                       )
                     : const Icon(Icons.check_circle_rounded),
-                label: const Text("Save Selected Pin Location"),
+                label: const Text("Save Selected Location"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade600,
                   foregroundColor: Colors.white,
@@ -585,7 +743,7 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
                   _updateMapCamera();
                 },
                 icon: const Icon(Icons.cancel_rounded),
-                label: const Text("Clear Selected Pin"),
+                label: const Text("Clear Selected Location"),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.redAccent,
                   side: const BorderSide(color: Colors.redAccent),
