@@ -98,7 +98,7 @@ class AuditLogPage extends StatelessWidget {
   Widget buildHeader(bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
@@ -123,7 +123,7 @@ class AuditLogPage extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.18),
               shape: BoxShape.circle,
@@ -131,24 +131,24 @@ class AuditLogPage extends StatelessWidget {
             child: const Icon(
               Icons.security_rounded,
               color: Colors.white,
-              size: 70,
+              size: 36,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           const Text(
             "Audit Logs",
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             "Track admin actions, threshold updates, and system activities",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 13,
               height: 1.4,
               color: Colors.white.withOpacity(0.88),
             ),

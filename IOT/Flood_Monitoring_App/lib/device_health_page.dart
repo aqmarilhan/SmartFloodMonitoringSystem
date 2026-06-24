@@ -124,7 +124,7 @@ class DeviceHealthPage extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: online
@@ -159,7 +159,7 @@ class DeviceHealthPage extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.18),
               shape: BoxShape.circle,
@@ -167,32 +167,32 @@ class DeviceHealthPage extends StatelessWidget {
             child: Icon(
               online ? Icons.check_circle_rounded : Icons.error_rounded,
               color: Colors.white,
-              size: 70,
+              size: 36,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Text(
             deviceName,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 27,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             online
                 ? "Device is online and sending health data"
                 : "Device is offline or not recently updated",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 13,
               height: 1.4,
               color: Colors.white.withOpacity(0.88),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 14,

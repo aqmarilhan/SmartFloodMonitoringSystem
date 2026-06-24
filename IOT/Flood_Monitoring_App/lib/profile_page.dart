@@ -324,7 +324,7 @@ class _ProfilePageState extends State<ProfilePage> {
       alignment: Alignment.bottomRight,
       children: [
         CircleAvatar(
-          radius: 58,
+          radius: 46,
           backgroundColor: Colors.white.withOpacity(0.25),
           backgroundImage: hasLocalImage
               ? FileImage(File(profileImagePath))
@@ -332,7 +332,7 @@ class _ProfilePageState extends State<ProfilePage> {
           child: !hasLocalImage
               ? const Icon(
                   Icons.person,
-                  size: 70,
+                  size: 52,
                   color: Colors.white,
                 )
               : null,
@@ -340,20 +340,21 @@ class _ProfilePageState extends State<ProfilePage> {
         GestureDetector(
           onTap: isUploadingImage ? null : pickAndUploadImage,
           child: CircleAvatar(
-            radius: 21,
+            radius: 18,
             backgroundColor: Colors.white,
             child: isUploadingImage
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
+                      color: Colors.blue,
                     ),
                   )
                 : const Icon(
-                    Icons.camera_alt,
+                    Icons.edit,
                     color: Colors.blue,
-                    size: 22,
+                    size: 18,
                   ),
           ),
         ),
@@ -364,7 +365,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget buildHeader(bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 32, 20, 30),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
@@ -385,7 +386,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         children: [
           buildProfileImage(),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -394,7 +395,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   username,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 28,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -405,6 +406,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: const Icon(
                   Icons.edit,
                   color: Colors.white,
+                  size: 20,
                 ),
               ),
             ],
