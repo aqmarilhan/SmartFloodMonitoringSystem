@@ -722,6 +722,9 @@ class _LoginPageState extends State<LoginPage> {
                                   setState(() {
                                     _enableBiometricLogin = val ?? false;
                                   });
+                                  if (!_enableBiometricLogin) {
+                                    _clearSavedCredentials();
+                                  }
                                 },
                               ),
                             ),
