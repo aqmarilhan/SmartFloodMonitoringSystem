@@ -442,7 +442,7 @@ class DeviceHealthPage extends StatelessWidget {
 
               healthCard(
                 icon: Icons.wifi_rounded,
-                title: "WiFi Signal",
+                title: "ESP32 WiFi Signal",
                 value: "$wifiQuality ($wifiRssi dBm)",
                 color: getHealthColor(wifiQuality),
                 isDarkMode: isDarkMode,

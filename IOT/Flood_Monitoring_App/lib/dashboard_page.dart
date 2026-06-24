@@ -181,8 +181,8 @@ class _DashboardPageState extends State<DashboardPage> {
       if (isWifiFault && _lastWifiFailure != wifiQuality) {
         _lastWifiFailure = wifiQuality;
         _showAdminNotification(
-          title: "WiFi Signal Failure",
-          message: "WiFi connection status reported warning/error: '$wifiQuality'. Please check the signal strength or router.",
+          title: "ESP32 WiFi Failure",
+          message: "ESP32 WiFi connection status reported warning/error: '$wifiQuality'. Please check the signal strength or router.",
           icon: Icons.wifi_off_rounded,
           color: Colors.orangeAccent,
         );
