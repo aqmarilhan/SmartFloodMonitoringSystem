@@ -21,7 +21,8 @@
 
 #define API_KEY "AIzaSyBrqHEmCI-7ArtYXfye33QyjJ6MNGTXFOY"
 
-#define DATABASE_URL "https://smart-flood-system-c5823-default-rtdb.asia-southeast1.firebasedatabase.app/"
+// Removed trailing slash to prevent malformed REST requests
+#define DATABASE_URL "https://smart-flood-system-c5823-default-rtdb.asia-southeast1.firebasedatabase.app"
 
 // =========================
 // SENSOR PINS
@@ -561,6 +562,14 @@ void uploadDeviceHealth()
   Serial.println("Device Health Uploaded");
 }
 
+// Firebase Token/Auth Status Callback for Debugging
+void tokenStatusCallback(TokenInfo info) {
+  Serial.printf("Token Info: Status = %d, Type = %d\n", info.status, info.type);
+  if (info.status == token_status_error) {
+    Serial.printf("Token Error: %s\n", info.error.message.c_str());
+  }
+}
+
 // =========================
 // SETUP
 // =========================
@@ -583,7 +592,6 @@ void setup() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   while (WiFi.status() != WL_CONNECTED) {
-
     delay(500);
     Serial.print(".");
   }
@@ -591,7 +599,24 @@ void setup() {
   Serial.println("");
   Serial.println("WiFi Connected");
   
+  // Wait for NTP time sync to prevent SSL and Token Handshake Failures
+  Serial.print("Synchronizing time via NTP");
   configTime(28800, 0, "pool.ntp.org");
+  time_t now = time(nullptr);
+  int retry = 0;
+  while (now < 24 * 3600 && retry < 30) {
+    delay(500);
+    Serial.print(".");
+    now = time(nullptr);
+    retry++;
+  }
+  Serial.println("");
+  if (now >= 24 * 3600) {
+    Serial.print("NTP Time Sync Success: ");
+    Serial.println(ctime(&now));
+  } else {
+    Serial.println("NTP Time Sync Timed Out! Authentication might fail.");
+  }
 
   // =========================
   // FIREBASE CONFIG
@@ -599,6 +624,9 @@ void setup() {
 
 config.api_key = API_KEY;
 config.database_url = DATABASE_URL;
+
+// Set the status callback to capture authentication details
+config.token_status_callback = tokenStatusCallback;
 
 Firebase.reconnectWiFi(true);
 
