@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'admin_page.dart';
 import 'monitoring_page.dart';
 import 'history_page.dart';
@@ -33,6 +34,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   String lastSync = DateTime.now().toString().substring(0, 19);
 
+  StreamSubscription? _deviceHealthSubscription;
+  bool _lastOfflineState = false;
+  String _lastWifiFailure = "NORMAL";
+  String _lastUltrasonicFailure = "NORMAL";
+  String _lastWaterSensorFailure = "NORMAL";
+
   final String databaseURL =
       "https://smart-flood-system-c5823-default-rtdb.asia-southeast1.firebasedatabase.app";
 
@@ -50,6 +57,12 @@ class _DashboardPageState extends State<DashboardPage> {
     listenToHistory();
     listenToRatings();
     listenToFloodStatus();
+  }
+
+  @override
+  void dispose() {
+    _deviceHealthSubscription?.cancel();
+    super.dispose();
   }
 
   void listenToFloodStatus() {
@@ -75,6 +88,8 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {
         isAdmin = false;
       });
+      _deviceHealthSubscription?.cancel();
+      _deviceHealthSubscription = null;
       return;
     }
 
@@ -93,6 +108,13 @@ class _DashboardPageState extends State<DashboardPage> {
           isAdmin = role == "admin";
         });
 
+        if (isAdmin) {
+          listenToDeviceHealthNotifications();
+        } else {
+          _deviceHealthSubscription?.cancel();
+          _deviceHealthSubscription = null;
+        }
+
         debugPrint("Dashboard UID: ${currentUser.uid}");
         debugPrint("Dashboard Role: $role");
         debugPrint("Dashboard Is Admin: $isAdmin");
@@ -100,6 +122,8 @@ class _DashboardPageState extends State<DashboardPage> {
         setState(() {
           isAdmin = false;
         });
+        _deviceHealthSubscription?.cancel();
+        _deviceHealthSubscription = null;
 
         debugPrint("No role found for UID: ${currentUser.uid}");
       }
@@ -109,7 +133,169 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {
         isAdmin = false;
       });
+      _deviceHealthSubscription?.cancel();
+      _deviceHealthSubscription = null;
     }
+  }
+
+  void listenToDeviceHealthNotifications() {
+    _deviceHealthSubscription?.cancel();
+    _deviceHealthSubscription = database.ref("DeviceStatus").onValue.listen((event) {
+      final data = event.snapshot.value;
+      if (data == null || data is! Map) return;
+
+      final statusMap = Map<dynamic, dynamic>.from(data);
+
+      // Check ESP32 Online status
+      final lastSeenEpoch = _getInt(statusMap, "last_seen_epoch");
+      bool isOnline = false;
+      if (lastSeenEpoch == 0) {
+        isOnline = statusMap["online"] == true;
+      } else {
+        final nowEpoch = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final difference = nowEpoch - lastSeenEpoch;
+        isOnline = difference <= 60;
+      }
+
+      final isOffline = !isOnline;
+
+      if (isOffline && !_lastOfflineState) {
+        _lastOfflineState = true;
+        _showAdminNotification(
+          title: "ESP32 System Offline",
+          message: "The monitoring device has lost connection to Firebase. Please check hardware power and connections.",
+          icon: Icons.cloud_off_rounded,
+          color: Colors.redAccent,
+        );
+      } else if (!isOffline) {
+        _lastOfflineState = false;
+      }
+
+      // Check WiFi Status
+      final wifiQuality = statusMap["wifi_quality"]?.toString().toUpperCase() ?? "";
+      final isWifiFault = wifiQuality.contains("FAULT") ||
+          wifiQuality.contains("CHECK") ||
+          wifiQuality.contains("SHORT") ||
+          wifiQuality.contains("OFFLINE");
+
+      if (isWifiFault && _lastWifiFailure != wifiQuality) {
+        _lastWifiFailure = wifiQuality;
+        _showAdminNotification(
+          title: "WiFi Signal Failure",
+          message: "WiFi connection status reported warning/error: '$wifiQuality'. Please check the signal strength or router.",
+          icon: Icons.wifi_off_rounded,
+          color: Colors.orangeAccent,
+        );
+      } else if (!isWifiFault) {
+        _lastWifiFailure = "NORMAL";
+      }
+
+      // Check Ultrasonic Sensor
+      final ultrasonicStatus = statusMap["ultrasonic_status"]?.toString().toUpperCase() ?? "";
+      final isUltrasonicFault = ultrasonicStatus.contains("FAULT") ||
+          ultrasonicStatus.contains("CHECK") ||
+          ultrasonicStatus.contains("SHORT");
+
+      if (isUltrasonicFault && _lastUltrasonicFailure != ultrasonicStatus) {
+        _lastUltrasonicFailure = ultrasonicStatus;
+        _showAdminNotification(
+          title: "Ultrasonic Sensor Failure",
+          message: "The ultrasonic sensor reported error status: '$ultrasonicStatus'. Please inspect the sensor unit.",
+          icon: Icons.sensors_off_rounded,
+          color: Colors.redAccent,
+        );
+      } else if (!isUltrasonicFault) {
+        _lastUltrasonicFailure = "NORMAL";
+      }
+
+      // Check Water Level Sensor
+      final waterSensorStatus = statusMap["water_sensor_status"]?.toString().toUpperCase() ?? "";
+      final isWaterFault = waterSensorStatus.contains("FAULT") ||
+          waterSensorStatus.contains("CHECK") ||
+          waterSensorStatus.contains("SHORT");
+
+      if (isWaterFault && _lastWaterSensorFailure != waterSensorStatus) {
+        _lastWaterSensorFailure = waterSensorStatus;
+        _showAdminNotification(
+          title: "Water Level Sensor Failure",
+          message: "The water level sensor reported error status: '$waterSensorStatus'. Please inspect the water sensor board.",
+          icon: Icons.water_damage_rounded,
+          color: Colors.redAccent,
+        );
+      } else if (!isWaterFault) {
+        _lastWaterSensorFailure = "NORMAL";
+      }
+    });
+  }
+
+  int _getInt(Map data, String key) {
+    final value = data[key];
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value?.toString() ?? "") ?? 0;
+  }
+
+  void _showAdminNotification({
+    required String title,
+    required String message,
+    required IconData icon,
+    required Color color,
+  }) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+          title: Row(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: TextStyle(
+              color: isDarkMode ? Colors.grey.shade300 : Colors.black87,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: color,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Acknowledge",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void listenToHistory() {
