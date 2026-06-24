@@ -132,7 +132,7 @@ class _LoginPageState extends State<LoginPage> {
   // Cryptography for Security FYP (AES-128)
   String _encryptData(String plainText) {
     final key = enc.Key.fromUtf8('my32lengthsupersecretnooneknows1'); // 32 chars
-    final iv = enc.IV.fromLength(16);
+    final iv = enc.IV.fromUtf8('1234567890123456'); // 16 chars static IV
     final encrypter = enc.Encrypter(enc.AES(key));
     final encrypted = encrypter.encrypt(plainText, iv: iv);
     return encrypted.base64;
@@ -141,7 +141,7 @@ class _LoginPageState extends State<LoginPage> {
   String _decryptData(String encryptedBase64) {
     try {
       final key = enc.Key.fromUtf8('my32lengthsupersecretnooneknows1');
-      final iv = enc.IV.fromLength(16);
+      final iv = enc.IV.fromUtf8('1234567890123456'); // 16 chars static IV
       final encrypter = enc.Encrypter(enc.AES(key));
       return encrypter.decrypt(enc.Encrypted.fromBase64(encryptedBase64), iv: iv);
     } catch (e) {
