@@ -232,7 +232,7 @@ class AdminPage extends StatelessWidget {
             context: context,
             icon: Icons.tune_rounded,
             title: "Threshold Calibration",
-            subtitle: "Adjust bucket depth and flood alert levels",
+            subtitle: "Adjust sensor reference height and flood alert levels",
             color: Colors.deepPurple,
             page: const AdminThresholdPage(),
             isDarkMode: isDarkMode,

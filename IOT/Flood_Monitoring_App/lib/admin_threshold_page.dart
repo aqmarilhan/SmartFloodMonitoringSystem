@@ -105,7 +105,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
     }
 
     if (dangerHeight >= bucketDepth) {
-      showMessage("Danger level must be lower than bucket depth.");
+      showMessage("Danger level must be lower than the sensor reference height.");
       return;
     }
 
@@ -132,7 +132,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
       await auditRef.set({
         "action": "Threshold calibration updated",
         "details":
-            "Bucket depth: $bucketDepth cm, Warning: $warningHeight cm, Danger: $dangerHeight cm",
+            "Sensor Reference Height: $bucketDepth cm, Warning: $warningHeight cm, Danger: $dangerHeight cm",
         "severity": "MEDIUM",
         "source": user?.email ?? "Unknown user",
         "category": "ADMIN",
@@ -346,7 +346,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Current Bucket Example",
+            "Calibration Reference Example",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -356,7 +356,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
           const SizedBox(height: 14),
           exampleRow(
             icon: Icons.height,
-            title: "Bucket depth",
+            title: "Sensor reference height",
             value: "28 cm",
             color: Colors.blue,
             isDarkMode: isDarkMode,
@@ -477,7 +477,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
                       children: [
                         buildTextField(
                           controller: bucketDepthController,
-                          label: "Bucket Depth",
+                          label: "Sensor Reference Height",
                           hint: "Example: 28",
                           icon: Icons.height,
                           isDarkMode: isDarkMode,
