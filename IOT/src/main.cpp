@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <WiFi.h>
 #include <Firebase_ESP_Client.h>
 
@@ -5,6 +6,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <time.h>
 #include <mbedtls/sha256.h>
+#include <mbedtls/version.h>
 
 // =========================
 // WIFI
@@ -87,9 +89,17 @@ String calculateSHA256(String data, String key) {
   
   mbedtls_sha256_context ctx;
   mbedtls_sha256_init(&ctx);
+  
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+  mbedtls_sha256_starts(&ctx, 0); // 0 for SHA-256
+  mbedtls_sha256_update(&ctx, (const unsigned char*)input.c_str(), input.length());
+  mbedtls_sha256_finish(&ctx, shaResult);
+#else
   mbedtls_sha256_starts_ret(&ctx, 0); // 0 for SHA-256
   mbedtls_sha256_update_ret(&ctx, (const unsigned char*)input.c_str(), input.length());
   mbedtls_sha256_finish_ret(&ctx, shaResult);
+#endif
+
   mbedtls_sha256_free(&ctx);
   
   String hashStr = "";
