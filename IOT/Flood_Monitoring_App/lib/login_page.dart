@@ -52,7 +52,6 @@ Future<bool> isEmailRegistered(String email) async {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
@@ -167,15 +166,15 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn();
-      
-      // Clear cached Google Sign-In session so the account chooser always appears
+
       try {
         await googleSignIn.signOut();
       } catch (e) {
-        // Ignore errors if signout fails or wasn't signed in
+        // Ignore sign out error.
       }
 
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
       if (googleUser == null) {
         setState(() {
           isLoading = false;
@@ -183,7 +182,8 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -231,6 +231,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on FirebaseAuthException catch (e) {
       String message = "Google Sign-In failed.";
+
       if (e.code == "account-exists-with-different-credential") {
         message = "An account already exists with the same email address.";
       } else if (e.code == "invalid-credential") {
@@ -240,15 +241,19 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (!mounted) return;
+
       setState(() {
         isLoading = false;
       });
+
       showMessage(message);
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         isLoading = false;
       });
+
       showMessage("Google Sign-In error: $e");
     }
   }
@@ -271,8 +276,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode =
-        Theme.of(context).brightness == Brightness.dark;
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final double logoSize =
+        (MediaQuery.of(context).size.width * 0.26).clamp(85.0, 120.0).toDouble();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -321,7 +328,10 @@ class _LoginPageState extends State<LoginPage> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 16,
+              ),
               child: Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
@@ -349,32 +359,33 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
                             color: isDarkMode
-                                ? const Color(0xFF06B6D4).withOpacity(0.2)
-                                : const Color(0xFF0284C7).withOpacity(0.1),
-                            blurRadius: 24,
-                            spreadRadius: 1,
+                                ? const Color(0xFF06B6D4).withOpacity(0.18)
+                                : const Color(0xFF0284C7).withOpacity(0.10),
+                            blurRadius: 18,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                         child: Image.asset(
                           'assets/images/flood_logo.png',
-                          width: MediaQuery.of(context).size.width * 0.55,
-                          height: MediaQuery.of(context).size.width * 0.45,
+                          width: logoSize,
+                          height: logoSize,
                           fit: BoxFit.contain,
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
 
                     Text(
                       "Welcome Back",
@@ -410,11 +421,15 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: InputDecoration(
                         labelText: "Email",
                         labelStyle: TextStyle(
-                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                         prefixIcon: Icon(
                           Icons.email_outlined,
-                          color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                          color: isDarkMode
+                              ? const Color(0xFF06B6D4)
+                              : const Color(0xFF0284C7),
                         ),
                         filled: true,
                         fillColor: isDarkMode
@@ -423,14 +438,18 @@ class _LoginPageState extends State<LoginPage> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(18),
                           borderSide: BorderSide(
-                            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                            color: isDarkMode
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFCBD5E1),
                             width: 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(18),
                           borderSide: BorderSide(
-                            color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                            color: isDarkMode
+                                ? const Color(0xFF06B6D4)
+                                : const Color(0xFF0284C7),
                             width: 2,
                           ),
                         ),
@@ -448,18 +467,24 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: InputDecoration(
                         labelText: "Password",
                         labelStyle: TextStyle(
-                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                         prefixIcon: Icon(
                           Icons.lock_outline_rounded,
-                          color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                          color: isDarkMode
+                              ? const Color(0xFF06B6D4)
+                              : const Color(0xFF0284C7),
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             obscurePassword
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
-                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                            color: isDarkMode
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
                           onPressed: () {
                             setState(() {
@@ -474,14 +499,18 @@ class _LoginPageState extends State<LoginPage> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(18),
                           borderSide: BorderSide(
-                            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                            color: isDarkMode
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFCBD5E1),
                             width: 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(18),
                           borderSide: BorderSide(
-                            color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                            color: isDarkMode
+                                ? const Color(0xFF06B6D4)
+                                : const Color(0xFF0284C7),
                             width: 2,
                           ),
                         ),
@@ -496,8 +525,11 @@ class _LoginPageState extends State<LoginPage> {
                       child: ElevatedButton(
                         onPressed: isLoading ? null : login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
-                          foregroundColor: isDarkMode ? Colors.black : Colors.white,
+                          backgroundColor: isDarkMode
+                              ? const Color(0xFF06B6D4)
+                              : const Color(0xFF0284C7),
+                          foregroundColor:
+                              isDarkMode ? Colors.black : Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
@@ -509,7 +541,9 @@ class _LoginPageState extends State<LoginPage> {
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  color: isDarkMode ? Colors.black : Colors.white,
+                                  color: isDarkMode
+                                      ? Colors.black
+                                      : Colors.white,
                                 ),
                               )
                             : const Text(
@@ -528,7 +562,9 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         Expanded(
                           child: Divider(
-                            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+                            color: isDarkMode
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade300,
                             thickness: 1,
                           ),
                         ),
@@ -537,7 +573,8 @@ class _LoginPageState extends State<LoginPage> {
                           child: Text(
                             "OR",
                             style: TextStyle(
-                              color: getSubTextColor(isDarkMode).withOpacity(0.8),
+                              color:
+                                  getSubTextColor(isDarkMode).withOpacity(0.8),
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
@@ -545,7 +582,9 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         Expanded(
                           child: Divider(
-                            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+                            color: isDarkMode
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade300,
                             thickness: 1,
                           ),
                         ),
@@ -561,13 +600,17 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: isLoading ? null : signInWithGoogle,
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
-                            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                            color: isDarkMode
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFCBD5E1),
                             width: 1.5,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                           ),
-                          backgroundColor: isDarkMode ? const Color(0xFF0B0F19) : Colors.white,
+                          backgroundColor: isDarkMode
+                              ? const Color(0xFF0B0F19)
+                              : Colors.white,
                           foregroundColor: getMainTextColor(isDarkMode),
                         ),
                         child: Row(
@@ -577,7 +620,11 @@ class _LoginPageState extends State<LoginPage> {
                               'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/480px-Google_%22G%22_logo.svg.png',
                               height: 22,
                               width: 22,
-                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, size: 28),
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                Icons.g_mobiledata,
+                                size: 28,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             const Text(
@@ -610,7 +657,9 @@ class _LoginPageState extends State<LoginPage> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                          color: isDarkMode
+                              ? const Color(0xFF06B6D4)
+                              : const Color(0xFF0284C7),
                         ),
                       ),
                     ),
