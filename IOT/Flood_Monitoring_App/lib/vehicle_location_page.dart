@@ -22,11 +22,18 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
   bool isLoading = true;
   bool isSavingLocation = false;
   bool isSearchingAddress = false;
+  bool isSavingVehicle = false;
+  bool showRegisterForm = false;
 
   Map<String, dynamic> vehicles = {};
   String? selectedVehicleId;
 
   final addressController = TextEditingController();
+  final plateController = TextEditingController();
+  final brandController = TextEditingController();
+  final modelController = TextEditingController();
+  final colorController = TextEditingController();
+  final parkingLocationController = TextEditingController();
 
   final double defaultLatitude = 1.5586;
   final double defaultLongitude = 103.6375;
@@ -53,6 +60,11 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
   void dispose() {
     _mapController?.dispose();
     addressController.dispose();
+    plateController.dispose();
+    brandController.dispose();
+    modelController.dispose();
+    colorController.dispose();
+    parkingLocationController.dispose();
     super.dispose();
   }
 
@@ -264,6 +276,192 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
     } else {
       showMessage("Address not found. Please try a different search.");
     }
+  }
+
+  Future<void> saveVehicle() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      showMessage("Please login first.");
+      return;
+    }
+
+    final plateNumber = plateController.text.trim().toUpperCase();
+    final brand = brandController.text.trim();
+    final model = modelController.text.trim();
+    final color = colorController.text.trim();
+    final parkingLocation = parkingLocationController.text.trim();
+
+    String ownerUsername = "Unknown User";
+
+    final userSnapshot = await database
+        .ref("Users/${user.uid}")
+        .get()
+        .timeout(const Duration(seconds: 10));
+
+    if (userSnapshot.exists && userSnapshot.value != null) {
+      final userData = Map<dynamic, dynamic>.from(userSnapshot.value as Map);
+      ownerUsername = userData["username"]?.toString() ?? "Unknown User";
+    }
+
+    if (plateNumber.isEmpty ||
+        brand.isEmpty ||
+        model.isEmpty ||
+        color.isEmpty ||
+        parkingLocation.isEmpty) {
+      showMessage("Please fill all vehicle details.");
+      return;
+    }
+
+    if (plateNumber.length < 3) {
+      showMessage("Please enter a valid plate number.");
+      return;
+    }
+
+    setState(() {
+      isSavingVehicle = true;
+    });
+
+    try {
+      final ref = database.ref("Vehicles/${user.uid}");
+      final existingSnapshot =
+          await ref.get().timeout(const Duration(seconds: 10));
+
+      if (existingSnapshot.exists && existingSnapshot.value != null) {
+        final data = Map<dynamic, dynamic>.from(
+          existingSnapshot.value as Map,
+        );
+
+        bool plateExists = false;
+
+        data.forEach((key, value) {
+          final vehicle = Map<dynamic, dynamic>.from(value);
+
+          final existingPlate =
+              vehicle["plateNumber"]?.toString().toUpperCase() ?? "";
+
+          if (existingPlate == plateNumber) {
+            plateExists = true;
+          }
+        });
+
+        if (plateExists) {
+          if (!mounted) return;
+
+          setState(() {
+            isSavingVehicle = false;
+          });
+
+          showMessage("This vehicle plate number is already registered.");
+          return;
+        }
+      }
+
+      final newVehicleRef = ref.push();
+
+      await newVehicleRef.set({
+        "vehicleId": newVehicleRef.key,
+        "ownerUid": user.uid,
+        "ownerEmail": user.email ?? "Unknown email",
+        "ownerUsername": ownerUsername,
+        "plateNumber": plateNumber,
+        "brand": brand,
+        "model": model,
+        "color": color,
+        "parkingLocation": parkingLocation,
+        "status": "Active",
+        "createdAt": DateTime.now().toString(),
+        "createdAtEpoch": DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      });
+
+      await database.ref("Users/${user.uid}").update({
+        "hasVehicle": true,
+        "updatedAt": DateTime.now().toString(),
+      });
+
+      await loadVehicles();
+
+      if (!mounted) return;
+
+      setState(() {
+        isSavingVehicle = false;
+        showRegisterForm = false;
+      });
+
+      plateController.clear();
+      brandController.clear();
+      modelController.clear();
+      colorController.clear();
+      parkingLocationController.clear();
+
+      showMessage("Vehicle registered successfully.");
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isSavingVehicle = false;
+      });
+
+      showMessage("Failed to register vehicle: $e");
+    }
+  }
+
+  Future<void> deleteVehicle({
+    required String vehicleId,
+    required String plateNumber,
+  }) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      await database.ref("Vehicles/${user!.uid}/$vehicleId").remove();
+
+      await loadVehicles();
+
+      if (!mounted) return;
+
+      showMessage("$plateNumber deleted successfully.");
+    } catch (e) {
+      if (!mounted) return;
+
+      showMessage("Failed to delete vehicle: $e");
+    }
+  }
+
+  void showDeleteDialog({
+    required String vehicleId,
+    required String plateNumber,
+  }) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text("Delete Vehicle"),
+          content: Text("Delete vehicle $plateNumber?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+
+                await deleteVehicle(
+                  vehicleId: vehicleId,
+                  plateNumber: plateNumber,
+                );
+              },
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> saveCurrentLocation() async {
@@ -538,14 +736,14 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.location_on_rounded,
+              Icons.directions_car_rounded,
               color: Colors.white,
               size: 70,
             ),
           ),
           const SizedBox(height: 16),
           const Text(
-            "Vehicle Location",
+            "Vehicle Management",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 28,
@@ -555,7 +753,7 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Save vehicle GPS location and open it in Google Maps",
+            "Register vehicles, manage details, and track GPS locations on the map.",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
@@ -1086,6 +1284,246 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
     );
   }
 
+
+  Widget buildRegisterForm(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: getCardColor(isDarkMode),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Register New Vehicle",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: getMainTextColor(isDarkMode),
+            ),
+          ),
+          const SizedBox(height: 16),
+          buildFormTextField(
+            controller: plateController,
+            label: "Plate Number",
+            hint: "e.g., JQW1234",
+            icon: Icons.pin_rounded,
+            isDarkMode: isDarkMode,
+            textCapitalization: TextCapitalization.characters,
+          ),
+          buildFormTextField(
+            controller: brandController,
+            label: "Brand",
+            hint: "e.g., Proton, Toyota",
+            icon: Icons.branding_watermark_rounded,
+            isDarkMode: isDarkMode,
+          ),
+          buildFormTextField(
+            controller: modelController,
+            label: "Model",
+            hint: "e.g., Saga, Vios",
+            icon: Icons.model_training_rounded,
+            isDarkMode: isDarkMode,
+          ),
+          buildFormTextField(
+            controller: colorController,
+            label: "Color",
+            hint: "e.g., Black, White",
+            icon: Icons.color_lens_rounded,
+            isDarkMode: isDarkMode,
+          ),
+          buildFormTextField(
+            controller: parkingLocationController,
+            label: "Default Parking Location",
+            hint: "e.g., Block A, Lot 45",
+            icon: Icons.local_parking_rounded,
+            isDarkMode: isDarkMode,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: isSavingVehicle ? null : saveVehicle,
+              icon: isSavingVehicle
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.add_circle_rounded),
+              label: const Text("Register Vehicle"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildFormTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required bool isDarkMode,
+    TextCapitalization textCapitalization = TextCapitalization.words,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller,
+        textCapitalization: textCapitalization,
+        style: TextStyle(
+          color: getMainTextColor(isDarkMode),
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          hintStyle: TextStyle(
+            color: getSubTextColor(isDarkMode).withOpacity(0.6),
+          ),
+          prefixIcon: Icon(icon),
+          filled: true,
+          fillColor: isDarkMode ? const Color(0xFF0F172A) : Colors.grey.shade100,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide(
+              color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildRegisteredVehiclesList(bool isDarkMode) {
+    if (vehicles.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
+          child: Text(
+            "Registered Vehicles (${vehicles.length})",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: getMainTextColor(isDarkMode),
+            ),
+          ),
+        ),
+        ...vehicles.entries.map((entry) {
+          final vehicle = entry.value is Map
+              ? Map<dynamic, dynamic>.from(entry.value as Map)
+              : <dynamic, dynamic>{};
+
+          final plate = vehicle["plateNumber"]?.toString() ?? "Vehicle";
+          final brand = vehicle["brand"]?.toString() ?? "";
+          final model = vehicle["model"]?.toString() ?? "";
+          final color = vehicle["color"]?.toString() ?? "";
+          final parkLoc = vehicle["parkingLocation"]?.toString() ?? "";
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: getCardColor(isDarkMode),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? const Color(0xFF06B6D4).withOpacity(0.15)
+                        : const Color(0xFF0284C7).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.directions_car_filled_rounded,
+                    color: isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        plate,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: getMainTextColor(isDarkMode),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "$brand $model • $color",
+                        style: TextStyle(
+                          color: getSubTextColor(isDarkMode),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 16,
+                            color: Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              parkLoc,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: getSubTextColor(isDarkMode),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => showDeleteDialog(
+                    vehicleId: entry.key,
+                    plateNumber: plate,
+                  ),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  color: Colors.redAccent,
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -1096,7 +1534,7 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
         elevation: 0,
         backgroundColor: getBackgroundColor(isDarkMode),
         foregroundColor: getMainTextColor(isDarkMode),
-        title: const Text("Vehicle Location"),
+        title: const Text("Vehicle Management"),
         centerTitle: true,
         actions: [
           IconButton(
@@ -1119,19 +1557,76 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(18),
-              children: [
-                buildHeader(isDarkMode),
-                const SizedBox(height: 18),
-                buildVehicleSelector(isDarkMode),
-                const SizedBox(height: 18),
-                buildMapCard(isDarkMode),
-                const SizedBox(height: 18),
-                vehicles.isEmpty
-                    ? buildEmptyInfo(isDarkMode)
-                    : buildVehicleInfo(isDarkMode),
-              ],
+                children: [
+                  buildHeader(isDarkMode),
+                  const SizedBox(height: 18),
+                  
+                  // Vehicles List Card (shows if not empty)
+                  buildRegisteredVehiclesList(isDarkMode),
+                  const SizedBox(height: 12),
+
+                  // Toggle Registration Form Button
+                  Center(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          showRegisterForm = !showRegisterForm;
+                        });
+                      },
+                      icon: Icon(showRegisterForm
+                          ? Icons.remove_circle_outline_rounded
+                          : Icons.add_circle_outline_rounded),
+                      label: Text(showRegisterForm
+                          ? "Hide Registration Form"
+                          : "Register New Vehicle"),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDarkMode
+                            ? const Color(0xFF06B6D4)
+                            : const Color(0xFF0284C7),
+                        side: BorderSide(
+                          color: isDarkMode
+                              ? const Color(0xFF06B6D4)
+                              : const Color(0xFF0284C7),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Registration Form Section (shown if toggled or if list is empty)
+                  if (showRegisterForm || vehicles.isEmpty) ...[
+                    buildRegisterForm(isDarkMode),
+                    const SizedBox(height: 18),
+                  ],
+
+                  // Divider and Location Controls (shown only when vehicles exist)
+                  if (vehicles.isNotEmpty) ...[
+                    const Divider(height: 32, thickness: 1),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
+                      child: Text(
+                        "Location Control & Tracking",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: getMainTextColor(isDarkMode),
+                        ),
+                      ),
+                    ),
+                    buildVehicleSelector(isDarkMode),
+                    const SizedBox(height: 18),
+                    buildMapCard(isDarkMode),
+                    const SizedBox(height: 18),
+                    buildVehicleInfo(isDarkMode),
+                  ] else ...[
+                    buildEmptyInfo(isDarkMode),
+                  ],
+                ],
+              ),
             ),
-          ),
     );
   }
 }

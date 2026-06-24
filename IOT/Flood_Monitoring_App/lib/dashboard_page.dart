@@ -5,7 +5,6 @@ import 'login_page.dart';
 import 'trend_page.dart';
 import 'profile_page.dart';
 import 'rating_page.dart';
-import 'register_vehicle_page.dart';
 import 'vehicle_location_page.dart';
 import 'emergency_contact_page.dart';
 import 'flood_risk_map_page.dart';
@@ -827,25 +826,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
 
                   buildDashboardCard(
-                    icon: Icons.directions_car_outlined,
-                    title: "Register Vehicle",
-                    subtitle: "Add and manage your vehicle details",
-                    color: Colors.indigo,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterVehiclePage(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  buildDashboardCard(
-                    icon: Icons.location_on_outlined,
-                    title: "Vehicle Location",
-                    subtitle: "Save and track your vehicle GPS coordinates",
+                    icon: Icons.directions_car_rounded,
+                    title: "Vehicle Management",
+                    subtitle: "Register vehicles and control GPS coordinates",
                     color: Colors.indigo,
                     isDarkMode: isDarkMode,
                     onTap: () {
