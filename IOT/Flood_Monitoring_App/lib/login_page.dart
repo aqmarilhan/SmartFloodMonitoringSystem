@@ -71,19 +71,34 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _checkBiometricAvailability();
-    _loadSavedCredentialsFlag();
+    _initBiometricsAndCredentials();
+  }
+
+  Future<void> _initBiometricsAndCredentials() async {
+    await _checkBiometricAvailability();
+    await _loadSavedCredentialsFlag();
+
+    // Trigger biometric login if credentials exist and biometrics are supported
+    if (_hasSavedCredentials && _canCheckBiometrics && _biometricsAvailable) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && emailController.text.isNotEmpty && !isLoading) {
+          loginWithBiometrics();
+        }
+      });
+    }
   }
 
   Future<void> _checkBiometricAvailability() async {
     try {
       final isAvailable = await auth.canCheckBiometrics;
       final isDeviceSupported = await auth.isDeviceSupported();
+      if (!mounted) return;
       setState(() {
         _canCheckBiometrics = isAvailable && isDeviceSupported;
       });
       if (_canCheckBiometrics) {
         final availableBiometrics = await auth.getAvailableBiometrics();
+        if (!mounted) return;
         setState(() {
           _biometricsAvailable = availableBiometrics.isNotEmpty;
         });
@@ -98,6 +113,7 @@ class _LoginPageState extends State<LoginPage> {
       final prefs = await SharedPreferences.getInstance();
       final hasEmail = prefs.containsKey("saved_email");
       final hasPassword = prefs.containsKey("saved_password");
+      if (!mounted) return;
       setState(() {
         _hasSavedCredentials = hasEmail && hasPassword;
         if (hasEmail) {
@@ -108,15 +124,6 @@ class _LoginPageState extends State<LoginPage> {
           }
         }
       });
-
-      // Automatically trigger biometric login if credentials exist and biometrics are supported
-      if (_hasSavedCredentials && _canCheckBiometrics && _biometricsAvailable) {
-        Future.delayed(const Duration(milliseconds: 700), () {
-          if (mounted && emailController.text.isNotEmpty && !isLoading) {
-            loginWithBiometrics();
-          }
-        });
-      }
     } catch (e) {
       debugPrint("Error loading biometric credentials flag: $e");
     }
@@ -215,7 +222,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         isLoading = false;
       });
-      showMessage("Biometric login failed.");
+      showMessage("Biometric login failed: $e");
     }
   }
 
