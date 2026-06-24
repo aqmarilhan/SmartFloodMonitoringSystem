@@ -962,18 +962,6 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
         foregroundColor: getMainTextColor(isDarkMode),
         title: const Text("Emergency Contacts"),
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                isLoading = true;
-              });
-
-              loadContacts();
-            },
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
       ),
       body: isLoading
           ? const Center(
