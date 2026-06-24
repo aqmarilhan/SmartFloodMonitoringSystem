@@ -170,7 +170,7 @@ class _RatingPageState extends State<RatingPage> {
   Widget buildHeader(bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
@@ -195,7 +195,7 @@ class _RatingPageState extends State<RatingPage> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.18),
               shape: BoxShape.circle,
@@ -203,25 +203,25 @@ class _RatingPageState extends State<RatingPage> {
             child: const Icon(
               Icons.star_rounded,
               color: Colors.white,
-              size: 70,
+              size: 36,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           const Text(
             "Rate Application",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             "Share your feedback to help improve the Smart Flood Monitoring System",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 13,
               height: 1.4,
               color: Colors.white.withOpacity(0.88),
             ),

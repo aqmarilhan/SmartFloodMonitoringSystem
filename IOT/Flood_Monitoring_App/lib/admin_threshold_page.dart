@@ -183,7 +183,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
   Widget buildHeader(bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
@@ -208,7 +208,7 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.18),
               shape: BoxShape.circle,
@@ -216,25 +216,25 @@ class _AdminThresholdPageState extends State<AdminThresholdPage> {
             child: const Icon(
               Icons.tune_rounded,
               color: Colors.white,
-              size: 70,
+              size: 36,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           const Text(
             "Threshold Calibration",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 27,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             "Adjust flood detection levels without modifying ESP32 code",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 13,
               height: 1.4,
               color: Colors.white.withOpacity(0.88),
             ),

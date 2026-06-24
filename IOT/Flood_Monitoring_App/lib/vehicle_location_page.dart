@@ -590,7 +590,7 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
   Widget buildHeader(bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
@@ -602,24 +602,24 @@ class _VehicleLocationPageState extends State<VehicleLocationPage> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(10),
             decoration: const BoxDecoration(
               color: Colors.white24,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.directions_car_rounded, color: Colors.white, size: 70),
+            child: const Icon(Icons.directions_car_rounded, color: Colors.white, size: 36),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           const Text(
             "Vehicle Management",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             "Register vehicles, manage details, and track GPS locations on the map.",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15, height: 1.4, color: Colors.white.withOpacity(0.88)),
+            style: TextStyle(fontSize: 13, height: 1.4, color: Colors.white.withOpacity(0.88)),
           ),
         ],
       ),

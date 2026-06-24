@@ -390,7 +390,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
   Widget buildHeader(bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
@@ -415,7 +415,7 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.18),
               shape: BoxShape.circle,
@@ -423,27 +423,27 @@ class _EmergencyContactPageState extends State<EmergencyContactPage> {
             child: const Icon(
               Icons.emergency_rounded,
               color: Colors.white,
-              size: 64,
+              size: 36,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           const Text(
             "Emergency Contacts",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 27,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             "Save up to 3 contacts, select a primary target for alerts, and call any of them directly.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 13,
               height: 1.4,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withOpacity(0.88),
             ),
           ),
           const SizedBox(height: 14),

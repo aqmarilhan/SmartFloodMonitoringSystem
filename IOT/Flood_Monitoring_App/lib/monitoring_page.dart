@@ -414,7 +414,7 @@ Widget buildModernStatusHeader() {
   Color statusColor = getStatusColor();
   return Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(28),
       gradient: LinearGradient(
@@ -436,7 +436,7 @@ Widget buildModernStatusHeader() {
     child: Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.2),
             shape: BoxShape.circle,
@@ -447,30 +447,30 @@ Widget buildModernStatusHeader() {
           ),
           child: Icon(
             getStatusIcon(),
-            size: 55,
+            size: 36,
             color: Colors.white,
           ),
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 10),
 
         Text(
           floodStatus,
           style: const TextStyle(
-            fontSize: 32,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.white,
             letterSpacing: 0.5,
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
         Text(
           getStatusDescription(),
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             height: 1.4,
             color: Colors.white,
           ),
