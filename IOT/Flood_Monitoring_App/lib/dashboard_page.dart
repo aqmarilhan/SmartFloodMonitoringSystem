@@ -305,7 +305,13 @@ class _DashboardPageState extends State<DashboardPage> {
             child: CircleAvatar(
               radius: 40,
               backgroundColor: isDarkMode ? const Color(0xFF0B0F19) : Colors.white,
-              backgroundImage: const AssetImage('assets/images/flood_logo_icon.png'),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Image.asset(
+                  'assets/images/flood_logo_icon.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),
