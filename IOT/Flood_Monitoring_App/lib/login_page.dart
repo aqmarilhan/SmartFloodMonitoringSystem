@@ -138,7 +138,9 @@ class _LoginPageState extends State<LoginPage> {
       final encrypter = enc.Encrypter(enc.AES(key));
       return encrypter.decrypt(enc.Encrypted.fromBase64(encryptedBase64), iv: iv);
     } catch (e) {
-      return "";
+      // Fallback: If decryption fails, the value is likely legacy plaintext.
+      // Return it as-is so it can log in and be automatically upgraded.
+      return encryptedBase64;
     }
   }
 
