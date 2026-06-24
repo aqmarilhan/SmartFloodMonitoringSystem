@@ -303,7 +303,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             child: CircleAvatar(
               radius: 40,
-              backgroundColor: isDarkMode ? const Color(0xFF0B0F19) : Colors.white,
+              backgroundColor: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(2.0),
                 child: Image.asset(
