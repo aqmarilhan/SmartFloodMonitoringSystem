@@ -9,6 +9,7 @@ import 'rating_page.dart';
 import 'vehicle_location_page.dart';
 import 'emergency_contact_page.dart';
 import 'flood_risk_map_page.dart';
+import 'statistic_detail_page.dart';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -586,67 +587,71 @@ class _DashboardPageState extends State<DashboardPage> {
     required String value,
     required Color color,
     required bool isDarkMode,
+    VoidCallback? onTap,
   }) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: isDarkMode
-              ? const Color(0xFF1E293B).withOpacity(0.7)
-              : Colors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
             color: isDarkMode
-                ? const Color(0xFF334155).withOpacity(0.6)
-                : const Color(0xFFE2E8F0),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+                ? const Color(0xFF1E293B).withOpacity(0.7)
+                : Colors.white.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isDarkMode
+                  ? const Color(0xFF334155).withOpacity(0.6)
+                  : const Color(0xFFE2E8F0),
+              width: 1.2,
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: color.withOpacity(0.3),
-                  width: 1,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: color.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 26,
                 ),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 26,
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: mainTextColor(isDarkMode),
+                  letterSpacing: -0.5,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: mainTextColor(isDarkMode),
-                letterSpacing: -0.5,
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: TextStyle(
+                  color: subTextColor(isDarkMode),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              style: TextStyle(
-                color: subTextColor(isDarkMode),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -946,6 +951,19 @@ class _DashboardPageState extends State<DashboardPage> {
                         value: "$warningCount",
                         color: Colors.orange,
                         isDarkMode: isDarkMode,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const StatisticDetailPage(
+                                statusFilter: "WARNING",
+                                title: "Warnings",
+                                color: Colors.orange,
+                                icon: Icons.warning_amber_rounded,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(width: 14),
                       buildStatCard(
@@ -954,6 +972,19 @@ class _DashboardPageState extends State<DashboardPage> {
                         value: "$dangerousCount",
                         color: Colors.red,
                         isDarkMode: isDarkMode,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const StatisticDetailPage(
+                                statusFilter: "DANGEROUS",
+                                title: "Dangerous",
+                                color: Colors.red,
+                                icon: Icons.dangerous_rounded,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

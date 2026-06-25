@@ -105,15 +105,36 @@ class _HistoryPageState extends State<HistoryPage> {
           "https://smart-flood-system-c5823-default-rtdb.asia-southeast1.firebasedatabase.app",
     );
 
-    final historyRef = database.ref("History");
-
-    final Map<String, dynamic> updates = {};
-    for (final id in selectedIds) {
-      updates[id] = null;
-    }
-
     try {
-      await historyRef.update(updates);
+      // Fetch current history to compute the new statistics after deletion
+      final historySnapshot = await database.ref("History").get();
+      int newWarningCount = 0;
+      int newDangerousCount = 0;
+
+      if (historySnapshot.exists && historySnapshot.value is Map) {
+        final historyMap = Map<dynamic, dynamic>.from(historySnapshot.value as Map);
+        historyMap.forEach((key, value) {
+          final id = key.toString();
+          // Only count if this record is NOT being deleted
+          if (!selectedIds.contains(id) && value is Map) {
+            final status = value["flood_status"]?.toString().toUpperCase() ?? "";
+            if (status == "WARNING") {
+              newWarningCount++;
+            } else if (status == "DANGEROUS") {
+              newDangerousCount++;
+            }
+          }
+        });
+      }
+
+      final Map<String, dynamic> updates = {};
+      for (final id in selectedIds) {
+        updates["History/$id"] = null;
+      }
+      updates["Statistics/warningCount"] = newWarningCount;
+      updates["Statistics/dangerousCount"] = newDangerousCount;
+
+      await database.ref().update(updates);
       
       setState(() {
         selectedIds.clear();
