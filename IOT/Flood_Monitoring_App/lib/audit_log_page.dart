@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class AuditLogPage extends StatelessWidget {
+class AuditLogPage extends StatefulWidget {
   const AuditLogPage({super.key});
+
+  @override
+  State<AuditLogPage> createState() => _AuditLogPageState();
+}
+
+class _AuditLogPageState extends State<AuditLogPage> {
+  bool isAdmin = false;
+  bool isSelectionMode = false;
+  final Set<String> selectedIds = {};
+  List<String> _currentVisibleIds = [];
 
   final String databaseURL =
       "https://smart-flood-system-c5823-default-rtdb.asia-southeast1.firebasedatabase.app/";
@@ -12,6 +23,105 @@ class AuditLogPage extends StatelessWidget {
         app: Firebase.app(),
         databaseURL: databaseURL,
       ).ref("AuditLogs");
+
+  @override
+  void initState() {
+    super.initState();
+    checkAdminAccess();
+  }
+
+  Future<void> checkAdminAccess() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      setState(() {
+        isAdmin = false;
+      });
+      return;
+    }
+
+    final database = FirebaseDatabase.instanceFor(
+      app: Firebase.app(),
+      databaseURL: databaseURL,
+    );
+
+    final snapshot = await database
+        .ref("Users/${currentUser.uid}/role")
+        .get()
+        .timeout(const Duration(seconds: 10));
+
+    if (snapshot.exists && snapshot.value != null) {
+      final role = snapshot.value.toString().toLowerCase();
+
+      setState(() {
+        isAdmin = role == "admin";
+      });
+    } else {
+      setState(() {
+        isAdmin = false;
+      });
+    }
+  }
+
+  Future<void> clearAllLogs() async {
+    if (!isAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Only admin can clear logs"),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await auditRef.remove();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("All audit logs cleared successfully"),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error clearing logs: $e"),
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteSelectedLogs() async {
+    if (!isAdmin || selectedIds.isEmpty) return;
+
+    final Map<String, dynamic> updates = {};
+    for (final id in selectedIds) {
+      updates[id] = null;
+    }
+
+    try {
+      await auditRef.update(updates);
+      
+      setState(() {
+        selectedIds.clear();
+        isSelectionMode = false;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Selected audit logs deleted successfully"),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error deleting logs: $e"),
+        ),
+      );
+    }
+  }
 
   int getEpoch(Map<String, dynamic> log) {
     final value = log["createdAtEpoch"];
@@ -98,7 +208,7 @@ class AuditLogPage extends StatelessWidget {
   Widget buildHeader(bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
@@ -111,19 +221,19 @@ class AuditLogPage extends StatelessWidget {
                   Colors.deepOrange,
                 ],
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDarkMode ? 0.30 : 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.18),
               shape: BoxShape.circle,
@@ -131,25 +241,25 @@ class AuditLogPage extends StatelessWidget {
             child: const Icon(
               Icons.security_rounded,
               color: Colors.white,
-              size: 36,
+              size: 28,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           const Text(
             "Audit Logs",
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             "Track admin actions, threshold updates, and system activities",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 13,
-              height: 1.4,
+              fontSize: 12,
+              height: 1.3,
               color: Colors.white.withOpacity(0.88),
             ),
           ),
@@ -165,16 +275,16 @@ class AuditLogPage extends StatelessWidget {
     required bool isDarkMode,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(top: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             icon,
-            size: 18,
+            size: 14,
             color: isDarkMode ? Colors.lightBlueAccent : Colors.blue,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Expanded(
             child: RichText(
               text: TextSpan(
@@ -182,7 +292,7 @@ class AuditLogPage extends StatelessWidget {
                   TextSpan(
                     text: "$title: ",
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: getSubTextColor(isDarkMode),
                     ),
@@ -190,7 +300,7 @@ class AuditLogPage extends StatelessWidget {
                   TextSpan(
                     text: value,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       color: getMainTextColor(isDarkMode),
                     ),
                   ),
@@ -206,6 +316,7 @@ class AuditLogPage extends StatelessWidget {
   Widget buildLogCard({
     required Map<String, dynamic> log,
     required bool isDarkMode,
+    required bool isSelected,
   }) {
     final action = getText(log, "action");
     final details = getText(log, "details");
@@ -217,19 +328,21 @@ class AuditLogPage extends StatelessWidget {
     final color = getSeverityColor(severity);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: getCardColor(isDarkMode),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withOpacity(0.25),
+          color: isSelected
+              ? (isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7))
+              : color.withOpacity(0.20),
+          width: isSelected ? 2.0 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(isDarkMode ? 0.20 : 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -239,20 +352,20 @@ class AuditLogPage extends StatelessWidget {
           Row(
             children: [
               CircleAvatar(
-                radius: 26,
-                backgroundColor: color.withOpacity(0.15),
+                radius: 18,
+                backgroundColor: color.withOpacity(0.12),
                 child: Icon(
                   getSeverityIcon(severity),
                   color: color,
-                  size: 28,
+                  size: 18,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   action,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: getMainTextColor(isDarkMode),
                   ),
@@ -260,29 +373,30 @@ class AuditLogPage extends StatelessWidget {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
+                  horizontal: 8,
+                  vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(30),
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   severity.toUpperCase(),
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.bold,
-                    fontSize: 11,
+                    fontSize: 10,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Divider(
-            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-          ),
           const SizedBox(height: 8),
+          Divider(
+            height: 1,
+            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+          ),
+          const SizedBox(height: 4),
           buildInfoRow(
             icon: Icons.description_rounded,
             title: "Details",
@@ -358,12 +472,110 @@ class AuditLogPage extends StatelessWidget {
         elevation: 0,
         backgroundColor: getBackgroundColor(isDarkMode),
         foregroundColor: getMainTextColor(isDarkMode),
-        title: const Text("Audit Logs"),
+        title: Text(isSelectionMode ? "${selectedIds.length} Selected" : "Audit Logs"),
         centerTitle: true,
+        leading: isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    isSelectionMode = false;
+                    selectedIds.clear();
+                  });
+                },
+              )
+            : null,
+        actions: [
+          if (isAdmin) ...[
+            if (isSelectionMode) ...[
+              IconButton(
+                icon: const Icon(Icons.select_all),
+                tooltip: "Select All",
+                onPressed: () {
+                  setState(() {
+                    if (selectedIds.length == _currentVisibleIds.length) {
+                      selectedIds.clear();
+                    } else {
+                      selectedIds.addAll(_currentVisibleIds);
+                    }
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: "Delete Selected",
+                onPressed: () {
+                  if (selectedIds.isEmpty) return;
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Delete Selected Logs"),
+                      content: Text(
+                        "Delete ${selectedIds.length} selected audit logs?",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            deleteSelectedLogs();
+                          },
+                          child: const Text("Delete"),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ] else ...[
+              IconButton(
+                icon: const Icon(Icons.playlist_add_check),
+                tooltip: "Select Mode",
+                onPressed: () {
+                  setState(() {
+                    isSelectionMode = true;
+                    selectedIds.clear();
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_forever),
+                tooltip: "Clear All Logs",
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Clear Audit Logs"),
+                      content: const Text(
+                        "Delete all audit logs?",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            clearAllLogs();
+                          },
+                          child: const Text("Delete"),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ]
+          ]
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await Future.delayed(const Duration(milliseconds: 500));
+          setState(() {});
         },
         child: StreamBuilder<DatabaseEvent>(
         stream: auditRef
@@ -412,25 +624,81 @@ class AuditLogPage extends StatelessWidget {
             return getEpoch(b).compareTo(getEpoch(a));
           });
 
+          // Track visible IDs for Select All feature
+          _currentVisibleIds = logs.map((l) => l["id"].toString()).toList();
+
           return ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(12),
             itemCount: logs.length + 1,
             itemBuilder: (context, index) {
               if (index == 0) {
                 return Column(
                   children: [
                     buildHeader(isDarkMode),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                   ],
                 );
               }
 
               final log = logs[index - 1];
+              final id = log["id"].toString();
+              final isSelected = selectedIds.contains(id);
 
-              return buildLogCard(
-                log: log,
-                isDarkMode: isDarkMode,
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    if (isSelectionMode && isAdmin)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Checkbox(
+                          value: isSelected,
+                          activeColor: isDarkMode
+                              ? const Color(0xFF06B6D4)
+                              : const Color(0xFF0284C7),
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                selectedIds.add(id);
+                              } else {
+                                  selectedIds.remove(id);
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          if (isSelectionMode && isAdmin) {
+                            setState(() {
+                              if (isSelected) {
+                                selectedIds.remove(id);
+                              } else {
+                                selectedIds.add(id);
+                              }
+                            });
+                          }
+                        },
+                        onLongPress: () {
+                          if (!isSelectionMode && isAdmin) {
+                            setState(() {
+                              isSelectionMode = true;
+                              selectedIds.add(id);
+                            });
+                          }
+                        },
+                        child: buildLogCard(
+                          log: log,
+                          isDarkMode: isDarkMode,
+                          isSelected: isSelected,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );

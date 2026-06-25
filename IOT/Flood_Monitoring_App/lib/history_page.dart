@@ -14,6 +14,9 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   bool isAdmin = false;
+  bool isSelectionMode = false;
+  final Set<String> selectedIds = {};
+  List<String> _currentVisibleIds = [];
 
   @override
   void initState() {
@@ -93,6 +96,46 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
+  Future<void> deleteSelectedHistory() async {
+    if (!isAdmin || selectedIds.isEmpty) return;
+
+    final FirebaseDatabase database = FirebaseDatabase.instanceFor(
+      app: Firebase.app(),
+      databaseURL:
+          "https://smart-flood-system-c5823-default-rtdb.asia-southeast1.firebasedatabase.app",
+    );
+
+    final historyRef = database.ref("History");
+
+    final Map<String, dynamic> updates = {};
+    for (final id in selectedIds) {
+      updates[id] = null;
+    }
+
+    try {
+      await historyRef.update(updates);
+      
+      setState(() {
+        selectedIds.clear();
+        isSelectionMode = false;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Selected history records deleted successfully"),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error deleting records: $e"),
+        ),
+      );
+    }
+  }
+
   Color getHistoryStatusColor(String status) {
     if (status == "WARNING") {
       return Colors.orange;
@@ -128,10 +171,10 @@ class _HistoryPageState extends State<HistoryPage> {
       children: [
         Icon(
           icon,
-          size: 20,
+          size: 16,
           color: isDarkMode ? Colors.lightBlueAccent : Colors.blue,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,17 +182,17 @@ class _HistoryPageState extends State<HistoryPage> {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 10,
                   color: isDarkMode
                       ? Colors.grey.shade400
                       : Colors.grey.shade600,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.black87,
                 ),
@@ -305,38 +348,104 @@ class _HistoryPageState extends State<HistoryPage> {
       backgroundColor:
           isDarkMode ? const Color(0xFF0F172A) : Colors.lightBlue.shade50,
       appBar: AppBar(
-        title: const Text("Flood History"),
+        title: Text(isSelectionMode ? "${selectedIds.length} Selected" : "Flood History"),
+        leading: isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    isSelectionMode = false;
+                    selectedIds.clear();
+                  });
+                },
+              )
+            : null,
         actions: [
-          if (isAdmin)
-            IconButton(
-              icon: const Icon(Icons.delete_forever),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Clear History"),
-                    content: const Text(
-                      "Delete all flood history records?",
+          if (isAdmin) ...[
+            if (isSelectionMode) ...[
+              IconButton(
+                icon: const Icon(Icons.select_all),
+                tooltip: "Select All",
+                onPressed: () {
+                  setState(() {
+                    if (selectedIds.length == _currentVisibleIds.length) {
+                      selectedIds.clear();
+                    } else {
+                      selectedIds.addAll(_currentVisibleIds);
+                    }
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: "Delete Selected",
+                onPressed: () {
+                  if (selectedIds.isEmpty) return;
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Delete Selected"),
+                      content: Text(
+                        "Delete ${selectedIds.length} selected history records?",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            deleteSelectedHistory();
+                          },
+                          child: const Text("Delete"),
+                        ),
+                      ],
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: const Text("Cancel"),
+                  );
+                },
+              ),
+            ] else ...[
+              IconButton(
+                icon: const Icon(Icons.playlist_add_check),
+                tooltip: "Select Mode",
+                onPressed: () {
+                  setState(() {
+                    isSelectionMode = true;
+                    selectedIds.clear();
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_forever),
+                tooltip: "Clear All",
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Clear History"),
+                      content: const Text(
+                        "Delete all flood history records?",
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          clearHistory();
-                        },
-                        child: const Text("Delete"),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            clearHistory();
+                          },
+                          child: const Text("Delete"),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ]
+          ]
         ],
       ),
       body: RefreshIndicator(
@@ -396,120 +505,176 @@ class _HistoryPageState extends State<HistoryPage> {
             return timeB.compareTo(timeA);
           });
 
+          // Track visible IDs for Select All feature
+          _currentVisibleIds = historyList.map((h) => h["id"].toString()).toList();
+
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             itemCount: historyList.length,
             itemBuilder: (context, index) {
               final history = historyList[index];
+              final id = history["id"].toString();
 
               final status = history["flood_status"]?.toString() ?? "--";
               final statusColor = getHistoryStatusColor(status);
+              final isSelected = selectedIds.contains(id);
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1F2937) : Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: statusColor.withValues(alpha: 0.25),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: isDarkMode ? 0.25 : 0.08,
+              return Row(
+                children: [
+                  if (isSelectionMode && isAdmin)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Checkbox(
+                        value: isSelected,
+                        activeColor: isDarkMode
+                            ? const Color(0xFF06B6D4)
+                            : const Color(0xFF0284C7),
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true) {
+                              selectedIds.add(id);
+                            } else {
+                              selectedIds.remove(id);
+                            }
+                          });
+                        },
                       ),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.16),
-                            shape: BoxShape.circle,
+                  Expanded(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        if (isSelectionMode && isAdmin) {
+                          setState(() {
+                            if (isSelected) {
+                              selectedIds.remove(id);
+                            } else {
+                              selectedIds.add(id);
+                            }
+                          });
+                        }
+                      },
+                      onLongPress: () {
+                        if (!isSelectionMode && isAdmin) {
+                          setState(() {
+                            isSelectionMode = true;
+                            selectedIds.add(id);
+                          });
+                        }
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? (isDarkMode ? const Color(0xFF06B6D4) : const Color(0xFF0284C7))
+                                : statusColor.withValues(alpha: 0.20),
+                            width: isSelected ? 2.0 : 1.0,
                           ),
-                          child: Icon(
-                            getHistoryStatusIcon(status),
-                            color: statusColor,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                status,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: statusColor,
-                                ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDarkMode ? 0.20 : 0.06,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                formatTimestamp(history["timestamp"]),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDarkMode
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    getHistoryStatusIcon(status),
+                                    color: statusColor,
+                                    size: 18,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        status,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: statusColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        formatTimestamp(history["timestamp"]),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: isDarkMode
+                                              ? Colors.grey.shade400
+                                              : Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                buildIntegrityBadge(history, isDarkMode),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Divider(
+                              height: 1,
+                              color: isDarkMode
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: historyInfoItem(
+                                    icon: Icons.straighten,
+                                    title: "Distance",
+                                    value:
+                                        "${formatDistance(history["distance_cm"])} cm",
+                                    isDarkMode: isDarkMode,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: historyInfoItem(
+                                    icon: Icons.water_drop,
+                                    title: "Water Level",
+                                    value: history["water_level"]?.toString() ?? "--",
+                                    isDarkMode: isDarkMode,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            historyInfoItem(
+                              icon: Icons.lightbulb,
+                              title: "LED Indicator",
+                              value:
+                                  history["led_indicator_status"]?.toString() ?? "--",
+                              isDarkMode: isDarkMode,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        buildIntegrityBadge(history, isDarkMode),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 14),
-                    Divider(
-                      color: isDarkMode
-                          ? Colors.grey.shade700
-                          : Colors.grey.shade300,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: historyInfoItem(
-                            icon: Icons.straighten,
-                            title: "Distance",
-                            value:
-                                "${formatDistance(history["distance_cm"])} cm",
-                            isDarkMode: isDarkMode,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: historyInfoItem(
-                            icon: Icons.water_drop,
-                            title: "Water Level",
-                            value: history["water_level"]?.toString() ?? "--",
-                            isDarkMode: isDarkMode,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    historyInfoItem(
-                      icon: Icons.lightbulb,
-                      title: "LED Indicator",
-                      value:
-                          history["led_indicator_status"]?.toString() ?? "--",
-                      isDarkMode: isDarkMode,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           );
