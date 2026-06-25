@@ -164,6 +164,40 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> resetPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      showMessage("Please enter your email address first to reset your password.");
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      showMessage("Password reset email sent. Please check your inbox.");
+    } on FirebaseAuthException catch (e) {
+      String message = "An error occurred. Please try again.";
+      if (e.code == "invalid-email") {
+        message = "The email address is invalid.";
+      } else if (e.code == "user-not-found") {
+        message = "No account found with this email.";
+      } else {
+        message = e.message ?? message;
+      }
+      showMessage(message);
+    } catch (e) {
+      showMessage("Error: $e");
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   Future<void> signInWithGoogle() async {
     setState(() {
       isLoading = true;
@@ -522,7 +556,29 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
+                    const SizedBox(height: 8),
 
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: isLoading ? null : resetPassword,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 0),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          "Forgot Password?",
+                          style: TextStyle(
+                            color: isDarkMode
+                                ? const Color(0xFF06B6D4)
+                                : const Color(0xFF0284C7),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
 
                     const SizedBox(height: 16),
 
