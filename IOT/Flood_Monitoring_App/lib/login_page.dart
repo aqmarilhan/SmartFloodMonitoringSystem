@@ -7,9 +7,7 @@ import 'signup_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:encrypt/encrypt.dart' as enc;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:local_auth/local_auth.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -61,180 +59,7 @@ class _LoginPageState extends State<LoginPage> {
   bool isLoading = false;
   bool obscurePassword = true;
 
-  // Biometrics parameters
-  final LocalAuthentication auth = LocalAuthentication();
-  bool _canCheckBiometrics = false;
-  bool _biometricsAvailable = false;
-  bool _hasSavedCredentials = false;
-  bool _enableBiometricLogin = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _initBiometricsAndCredentials();
-  }
-
-  Future<void> _initBiometricsAndCredentials() async {
-    await _checkBiometricAvailability();
-    await _loadSavedCredentialsFlag();
-
-    // Trigger biometric login if credentials exist and biometrics are supported
-    if (_hasSavedCredentials && _canCheckBiometrics && _biometricsAvailable) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted && emailController.text.isNotEmpty && !isLoading) {
-          loginWithBiometrics();
-        }
-      });
-    }
-  }
-
-  Future<void> _checkBiometricAvailability() async {
-    try {
-      final isAvailable = await auth.canCheckBiometrics;
-      final isDeviceSupported = await auth.isDeviceSupported();
-      if (!mounted) return;
-      setState(() {
-        _canCheckBiometrics = isAvailable && isDeviceSupported;
-      });
-      if (_canCheckBiometrics) {
-        final availableBiometrics = await auth.getAvailableBiometrics();
-        if (!mounted) return;
-        setState(() {
-          _biometricsAvailable = availableBiometrics.isNotEmpty;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error checking biometrics: $e");
-    }
-  }
-
-  Future<void> _loadSavedCredentialsFlag() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final hasEmail = prefs.containsKey("saved_email");
-      final hasPassword = prefs.containsKey("saved_password");
-      if (!mounted) return;
-      setState(() {
-        _hasSavedCredentials = hasEmail && hasPassword;
-        if (hasEmail) {
-          final savedEmail = prefs.getString("saved_email") ?? "";
-          final decryptedEmail = _decryptData(savedEmail);
-          if (decryptedEmail.isNotEmpty) {
-            emailController.text = decryptedEmail;
-          }
-        }
-      });
-    } catch (e) {
-      debugPrint("Error loading biometric credentials flag: $e");
-    }
-  }
-
-  // Cryptography for Security FYP (AES-128)
-  String _encryptData(String plainText) {
-    final key = enc.Key.fromUtf8('my32lengthsupersecretnooneknows1'); // 32 chars
-    final iv = enc.IV.fromUtf8('1234567890123456'); // 16 chars static IV
-    final encrypter = enc.Encrypter(enc.AES(key));
-    final encrypted = encrypter.encrypt(plainText, iv: iv);
-    return encrypted.base64;
-  }
-
-  String _decryptData(String encryptedBase64) {
-    try {
-      final key = enc.Key.fromUtf8('my32lengthsupersecretnooneknows1');
-      final iv = enc.IV.fromUtf8('1234567890123456'); // 16 chars static IV
-      final encrypter = enc.Encrypter(enc.AES(key));
-      return encrypter.decrypt(enc.Encrypted.fromBase64(encryptedBase64), iv: iv);
-    } catch (e) {
-      // Fallback: If decryption fails, the value is likely legacy plaintext.
-      // Return it as-is so it can log in and be automatically upgraded.
-      return encryptedBase64;
-    }
-  }
-
-  Future<void> loginWithBiometrics() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedEmailEnc = prefs.getString("saved_email") ?? "";
-      final savedPasswordEnc = prefs.getString("saved_password") ?? "";
-
-      if (savedEmailEnc.isEmpty || savedPasswordEnc.isEmpty) {
-        showMessage("No biometric credentials registered. Please login with password first.");
-        return;
-      }
-
-      final authenticated = await auth.authenticate(
-        localizedReason: 'Scan fingerprint or Face ID to login securely',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-        ),
-      );
-
-      if (!authenticated) return;
-
-      setState(() {
-        isLoading = true;
-      });
-
-      final email = _decryptData(savedEmailEnc);
-      final password = _decryptData(savedPasswordEnc);
-
-      if (email.isEmpty || password.isEmpty) {
-        showMessage("Decryption failed. Please login with password again.");
-        setState(() {
-          isLoading = false;
-        });
-        return;
-      }
-
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      await credential.user!.reload();
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user != null && user.email != "admin@gmail.com" && !user.emailVerified) {
-        await FirebaseAuth.instance.signOut();
-        if (!mounted) return;
-        setState(() {
-          isLoading = false;
-        });
-        showMessage("Email is not verified. Please check your inbox.");
-        return;
-      }
-
-      if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const DashboardPage(),
-        ),
-      );
-    } catch (e) {
-      debugPrint("Biometric login error: $e");
-      if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
-      showMessage("Biometric login failed: $e");
-    }
-  }
-
-  Future<void> _clearSavedCredentials() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove("saved_email");
-    await prefs.remove("saved_password");
-    setState(() {
-      _hasSavedCredentials = false;
-    });
-    showMessage("Biometric login credentials cleared.");
-  }
 
   void showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -288,15 +113,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Save credentials for Biometrics if enabled
-      final prefs = await SharedPreferences.getInstance();
-      if (_enableBiometricLogin) {
-        await prefs.setString("saved_email", _encryptData(email));
-        await prefs.setString("saved_password", _encryptData(password));
-      } else {
-        await prefs.remove("saved_email");
-        await prefs.remove("saved_password");
-      }
+
 
       if (!mounted) return;
 
@@ -705,40 +522,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    if (_canCheckBiometrics && _biometricsAvailable)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8, bottom: 8),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: Checkbox(
-                                value: _enableBiometricLogin,
-                                activeColor: isDarkMode
-                                    ? const Color(0xFF06B6D4)
-                                    : const Color(0xFF0284C7),
-                                onChanged: (val) {
-                                  setState(() {
-                                    _enableBiometricLogin = val ?? false;
-                                  });
-                                  if (!_enableBiometricLogin) {
-                                    _clearSavedCredentials();
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Enable Biometric Login next time",
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: getSubTextColor(isDarkMode),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+
 
                     const SizedBox(height: 16),
 
@@ -781,37 +565,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        if (_canCheckBiometrics && _biometricsAvailable && _hasSavedCredentials) ...[
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 54,
-                            height: 54,
-                            child: IconButton(
-                              onPressed: isLoading ? null : loginWithBiometrics,
-                              style: IconButton.styleFrom(
-                                backgroundColor: isDarkMode
-                                    ? const Color(0xFF1E293B)
-                                    : Colors.white,
-                                foregroundColor: isDarkMode
-                                    ? const Color(0xFF06B6D4)
-                                    : const Color(0xFF0284C7),
-                                side: BorderSide(
-                                  color: isDarkMode
-                                      ? const Color(0xFF334155)
-                                      : const Color(0xFFCBD5E1),
-                                  width: 1.5,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                              ),
-                              icon: const Icon(
-                                Icons.fingerprint_rounded,
-                                size: 30,
-                              ),
-                            ),
-                          ),
-                        ],
+
                       ],
                     ),
 
