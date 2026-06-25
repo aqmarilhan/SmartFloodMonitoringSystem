@@ -3,7 +3,6 @@ import 'dashboard_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'signup_page.dart';
-import 'reset_password_page.dart';
 import 'theme_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -165,13 +164,144 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void resetPassword() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ResetPasswordPage(),
-      ),
+  void showForgotPasswordDialog() {
+    final emailResetController = TextEditingController();
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Text(
+            "Reset Password",
+            style: TextStyle(
+              color: getMainTextColor(isDarkMode),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Enter your registered email address to receive a secure password reset link.",
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: emailResetController,
+                style: TextStyle(color: getMainTextColor(isDarkMode)),
+                decoration: InputDecoration(
+                  labelText: "Email Address",
+                  labelStyle: TextStyle(
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.email_outlined,
+                    color: isDarkMode
+                        ? const Color(0xFF06B6D4)
+                        : const Color(0xFF0284C7),
+                  ),
+                  filled: true,
+                  fillColor: isDarkMode
+                      ? const Color(0xFF0F172A).withOpacity(0.5)
+                      : Colors.grey.shade100,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(
+                      color: isDarkMode
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFCBD5E1),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(
+                      color: isDarkMode
+                          ? const Color(0xFF06B6D4)
+                          : const Color(0xFF0284C7),
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "Cancel",
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final email = emailResetController.text.trim();
+                if (email.isEmpty) {
+                  showMessage("Please enter your email address.");
+                  return;
+                }
+                Navigator.pop(context);
+                
+                setState(() {
+                  isLoading = true;
+                });
+
+                try {
+                  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                  showMessage("Password reset email sent. Please check your inbox.");
+                } on FirebaseAuthException catch (e) {
+                  String message = "An error occurred.";
+                  if (e.code == "invalid-email") {
+                    message = "The email address is invalid.";
+                  } else if (e.code == "user-not-found") {
+                    message = "No account found with this email.";
+                  } else {
+                    message = e.message ?? message;
+                  }
+                  showMessage(message);
+                } catch (e) {
+                  showMessage("Error: $e");
+                } finally {
+                  setState(() {
+                    isLoading = false;
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDarkMode
+                    ? const Color(0xFF06B6D4)
+                    : const Color(0xFF0284C7),
+                foregroundColor: isDarkMode ? Colors.black : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                "Send Link",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  void resetPassword() {
+    showForgotPasswordDialog();
   }
 
   Future<void> signInWithGoogle() async {
