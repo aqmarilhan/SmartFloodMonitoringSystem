@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'dashboard_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'theme_provider.dart';
 import 'signup_page.dart';
+import 'reset_password_page.dart';
+import 'theme_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -164,38 +165,13 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> resetPassword() async {
-    final email = emailController.text.trim();
-
-    if (email.isEmpty) {
-      showMessage("Please enter your email address first to reset your password.");
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      showMessage("Password reset email sent. Please check your inbox.");
-    } on FirebaseAuthException catch (e) {
-      String message = "An error occurred. Please try again.";
-      if (e.code == "invalid-email") {
-        message = "The email address is invalid.";
-      } else if (e.code == "user-not-found") {
-        message = "No account found with this email.";
-      } else {
-        message = e.message ?? message;
-      }
-      showMessage(message);
-    } catch (e) {
-      showMessage("Error: $e");
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+  void resetPassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ResetPasswordPage(),
+      ),
+    );
   }
 
   Future<void> signInWithGoogle() async {
