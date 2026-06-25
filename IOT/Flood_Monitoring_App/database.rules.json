@@ -1,0 +1,42 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "Users": {
+      "$uid": {
+        ".read": "auth != null",
+        // Users can write their own profiles and set role to 'user' initially. They cannot change their role afterwards unless they are an admin.
+        ".write": "auth != null && (auth.uid == $uid && ((!data.child('role').exists() && (!newData.child('role').exists() || newData.child('role').val() === 'user')) || (data.child('role').exists() && (!newData.child('role').exists() || data.child('role').val() === newData.child('role').val()))) || root.child('Users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+    "Settings": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('Users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "FloodMonitoring": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "DeviceStatus": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "Statistics": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "History": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "AuditLogs": {
+      // Only admins can view audit logs
+      ".read": "auth != null && root.child('Users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null"
+    },
+    "Ratings": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
