@@ -1,12 +1,9 @@
-#include <Arduino.h>
 #include <WiFi.h>
 #include <Firebase_ESP_Client.h>
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <time.h>
-#include <mbedtls/sha256.h>
-#include <mbedtls/version.h>
 
 // =========================
 // WIFI
@@ -21,7 +18,6 @@
 
 #define API_KEY "AIzaSyBrqHEmCI-7ArtYXfye33QyjJ6MNGTXFOY"
 
-// Removed trailing slash to prevent malformed REST requests
 #define DATABASE_URL "https://smart-flood-system-c5823-default-rtdb.asia-southeast1.firebasedatabase.app"
 
 // =========================
@@ -82,35 +78,6 @@ String previousStatus = "";
 String previousWaterSensorHealth = "";
 String waterSensorHealth = "OK";
 String ultrasonicHealth = "OK";
-
-// SHA-256 Cryptographic Hash Helper
-String calculateSHA256(String data, String key) {
-  String input = data + key;
-  unsigned char shaResult[32];
-  
-  mbedtls_sha256_context ctx;
-  mbedtls_sha256_init(&ctx);
-  
-#if MBEDTLS_VERSION_NUMBER >= 0x03000000
-  mbedtls_sha256_starts(&ctx, 0); // 0 for SHA-256
-  mbedtls_sha256_update(&ctx, (const unsigned char*)input.c_str(), input.length());
-  mbedtls_sha256_finish(&ctx, shaResult);
-#else
-  mbedtls_sha256_starts_ret(&ctx, 0); // 0 for SHA-256
-  mbedtls_sha256_update_ret(&ctx, (const unsigned char*)input.c_str(), input.length());
-  mbedtls_sha256_finish_ret(&ctx, shaResult);
-#endif
-
-  mbedtls_sha256_free(&ctx);
-  
-  String hashStr = "";
-  for (int i = 0; i < 32; i++) {
-    char buf[3];
-    sprintf(buf, "%02x", shaResult[i]);
-    hashStr += buf;
-  }
-  return hashStr;
-}
 String backupMode = "NORMAL";
 
 // For History Tracking
@@ -562,14 +529,6 @@ void uploadDeviceHealth()
   Serial.println("Device Health Uploaded");
 }
 
-// Firebase Token/Auth Status Callback for Debugging
-void tokenStatusCallback(TokenInfo info) {
-  Serial.printf("Token Info: Status = %d, Type = %d\n", info.status, info.type);
-  if (info.status == token_status_error) {
-    Serial.printf("Token Error: %s\n", info.error.message.c_str());
-  }
-}
-
 // =========================
 // SETUP
 // =========================
@@ -592,6 +551,7 @@ void setup() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   while (WiFi.status() != WL_CONNECTED) {
+
     delay(500);
     Serial.print(".");
   }
@@ -599,24 +559,13 @@ void setup() {
   Serial.println("");
   Serial.println("WiFi Connected");
   
-  // Wait for NTP time sync to prevent SSL and Token Handshake Failures
-  Serial.print("Synchronizing time via NTP");
-  configTime(28800, 0, "pool.ntp.org");
-  time_t now = time(nullptr);
-  int retry = 0;
-  while (now < 24 * 3600 && retry < 30) {
-    delay(500);
-    Serial.print(".");
-    now = time(nullptr);
-    retry++;
-  }
-  Serial.println("");
-  if (now >= 24 * 3600) {
-    Serial.print("NTP Time Sync Success: ");
-    Serial.println(ctime(&now));
-  } else {
-    Serial.println("NTP Time Sync Timed Out! Authentication might fail.");
-  }
+  configTime(
+  28800,
+  0,
+  "pool.ntp.org",
+  "time.google.com",
+  "time.nist.gov"
+);
 
   // =========================
   // FIREBASE CONFIG
@@ -624,9 +573,6 @@ void setup() {
 
 config.api_key = API_KEY;
 config.database_url = DATABASE_URL;
-
-// Set the status callback to capture authentication details
-config.token_status_callback = tokenStatusCallback;
 
 Firebase.reconnectWiFi(true);
 
@@ -855,23 +801,10 @@ Serial.println(status);
       ledStatus
     );
 
-    String timestampStr = getTimeStamp();
     success &= Firebase.RTDB.setString(
       &fbdo,
       timePath.c_str(),
-      timestampStr.c_str()
-    );
-
-    // Cryptographic Data Integrity Signature (SHA-256)
-    String dataToHash = String(distance, 2) + String(waterValue) + status + ledStatus + timestampStr;
-    String recordHash = calculateSHA256(dataToHash, "FloodSecuritySalt123!");
-
-    String hashPath = historyPath;
-    hashPath += "/hash";
-    success &= Firebase.RTDB.setString(
-      &fbdo,
-      hashPath.c_str(),
-      recordHash.c_str()
+      getTimeStamp()
     );
 
     lastHistorySave = millis();
