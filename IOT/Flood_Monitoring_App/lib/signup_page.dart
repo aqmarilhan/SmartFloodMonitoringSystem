@@ -35,7 +35,7 @@ class _SignupPageState extends State<SignupPage> {
       missing.add("at least one number");
     }
 
-    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_]'))) {
       missing.add("at least one special character");
     }
 

@@ -48,7 +48,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     if (!password.contains(RegExp(r'[0-9]'))) {
       missing.add("at least 1 number");
     }
-    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_]'))) {
       missing.add("at least 1 special character");
     }
 
