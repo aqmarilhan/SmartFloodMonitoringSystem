@@ -52,9 +52,9 @@ float waterHeight = 0.0;
 float bucketDepth = 34.0;
 float smoothedDistance = 34.0;
 float smoothingFactor = 0.70;// Water height level
-float warningWaterHeight = 2.0;
+float warningWaterHeight = 10.0;
 float dangerWaterHeight = 13.5;// Ultrasonic distance level
-float safeLevel = bucketDepth - warningWaterHeight;    // 32 cm
+float safeLevel = bucketDepth - warningWaterHeight;    // 24 cm
 float dangerLevel = bucketDepth - dangerWaterHeight;   // 20.5 cm
 
 // Adjust after checking Serial Monitor
@@ -248,7 +248,7 @@ void createDefaultSettings()
   Firebase.RTDB.setFloat(
     &settingsFbdo,
     "/Settings/warningWaterHeight",
-    2.0
+    10.0
   );
 
   Firebase.RTDB.setFloat(
