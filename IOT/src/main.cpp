@@ -418,64 +418,22 @@ void uploadDeviceHealth()
 
   updateSensorHealth();
 
-  Firebase.RTDB.setBool(
-    &fbdo,
-    "/DeviceStatus/online",
-    true
-  );
+  FirebaseJson healthJson;
+  healthJson.set("online", true);
+  healthJson.set("device_name", "ESP32 Flood Unit");
+  healthJson.set("last_seen", getTimeStamp());
+  healthJson.set("last_seen_epoch", (int)getUnixTime());
+  healthJson.set("wifi_rssi", WiFi.RSSI());
+  healthJson.set("wifi_quality", getWiFiQuality());
+  healthJson.set("water_sensor_status", waterSensorHealth);
+  healthJson.set("ultrasonic_status", ultrasonicHealth);
+  healthJson.set("backup_mode", backupMode);
+  healthJson.set("current_status", status);
 
-  Firebase.RTDB.setString(
+  Firebase.RTDB.updateNode(
     &fbdo,
-    "/DeviceStatus/device_name",
-    "ESP32 Flood Unit"
-  );
-
-  Firebase.RTDB.setString(
-    &fbdo,
-    "/DeviceStatus/last_seen",
-    getTimeStamp()
-  );
-
-  Firebase.RTDB.setInt(
-    &fbdo,
-    "/DeviceStatus/last_seen_epoch",
-    (int)getUnixTime()
-  );
-
-  Firebase.RTDB.setInt(
-    &fbdo,
-    "/DeviceStatus/wifi_rssi",
-    WiFi.RSSI()
-  );
-
-  Firebase.RTDB.setString(
-    &fbdo,
-    "/DeviceStatus/wifi_quality",
-    getWiFiQuality()
-  );
-
-  Firebase.RTDB.setString(
-    &fbdo,
-    "/DeviceStatus/water_sensor_status",
-    waterSensorHealth
-  );
-
-  Firebase.RTDB.setString(
-    &fbdo,
-    "/DeviceStatus/ultrasonic_status",
-    ultrasonicHealth
-  );
-
-  Firebase.RTDB.setString(
-    &fbdo,
-    "/DeviceStatus/backup_mode",
-    backupMode
-  );
-
-  Firebase.RTDB.setString(
-    &fbdo,
-    "/DeviceStatus/current_status",
-    status
+    "/DeviceStatus",
+    &healthJson
   );
 
   // Audit log when flood status changes
@@ -699,34 +657,17 @@ Serial.println(status);
     // UPLOAD LIVE FLOOD DATA FIRST
     // =========================
 
-    success &= Firebase.RTDB.setFloat(
-      &fbdo,
-      "/FloodMonitoring/distance_cm",
-      distance
-    );
+    FirebaseJson telemetryJson;
+    telemetryJson.set("distance_cm", distance);
+    telemetryJson.set("water_height_cm", waterHeight);
+    telemetryJson.set("water_level", waterValue);
+    telemetryJson.set("flood_status", status);
+    telemetryJson.set("led_indicator_status", ledStatus);
 
-    success &= Firebase.RTDB.setFloat(
+    success &= Firebase.RTDB.updateNode(
       &fbdo,
-      "/FloodMonitoring/water_height_cm",
-      waterHeight
-    );
-
-    success &= Firebase.RTDB.setInt(
-      &fbdo,
-      "/FloodMonitoring/water_level",
-      waterValue
-    );
-
-    success &= Firebase.RTDB.setString(
-      &fbdo,
-      "/FloodMonitoring/flood_status",
-      status
-    );
-
-    success &= Firebase.RTDB.setString(
-      &fbdo,
-      "/FloodMonitoring/led_indicator_status",
-      ledStatus
+      "/FloodMonitoring",
+      &telemetryJson
     );
 
     // =========================
@@ -751,58 +692,18 @@ Serial.println(status);
     String historyPath = "/History/";
     historyPath += String(millis());
 
-    String distancePath = historyPath;
-    distancePath += "/distance_cm";
+    FirebaseJson historyJson;
+    historyJson.set("distance_cm", distance);
+    historyJson.set("water_height_cm", waterHeight);
+    historyJson.set("water_level", waterValue);
+    historyJson.set("flood_status", status);
+    historyJson.set("led_indicator_status", ledStatus);
+    historyJson.set("timestamp", getTimeStamp());
 
-    String heightPath = historyPath;
-    heightPath += "/water_height_cm";
-
-    String waterPath = historyPath;
-    waterPath += "/water_level";
-
-    String statusPath = historyPath;
-    statusPath += "/flood_status";
-
-    String ledPath = historyPath;
-    ledPath += "/led_indicator_status";
-
-    String timePath = historyPath;
-    timePath += "/timestamp";
-
-    success &= Firebase.RTDB.setFloat(
+    success &= Firebase.RTDB.setJSON(
       &fbdo,
-      distancePath.c_str(),
-      distance
-    );
-
-    success &= Firebase.RTDB.setFloat(
-      &fbdo,
-      heightPath.c_str(),
-      waterHeight
-    );
-
-    success &= Firebase.RTDB.setInt(
-      &fbdo,
-      waterPath.c_str(),
-      waterValue
-    );
-
-    success &= Firebase.RTDB.setString(
-      &fbdo,
-      statusPath.c_str(),
-      status
-    );
-
-    success &= Firebase.RTDB.setString(
-      &fbdo,
-      ledPath.c_str(),
-      ledStatus
-    );
-
-    success &= Firebase.RTDB.setString(
-      &fbdo,
-      timePath.c_str(),
-      getTimeStamp()
+      historyPath.c_str(),
+      &historyJson
     );
 
     lastHistorySave = millis();
