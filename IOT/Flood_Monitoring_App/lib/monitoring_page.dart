@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dashboard_page.dart';
 
 class FloodMonitoringPage extends StatefulWidget {
   const FloodMonitoringPage({super.key});
@@ -102,10 +103,12 @@ if (data != null && data is Map) {
     statsRef.child("warningCount")
         .set(warningCount);
 
-    showNotification(
-      "⚠️ Flood Warning",
-      "Water level is increasing. Stay alert.",
-    );
+    if (DashboardPage.notificationsEnabled) {
+      showNotification(
+        "⚠️ Flood Warning",
+        "Water level is increasing. Stay alert.",
+      );
+    }
   }
 
   else if (newStatus == "DANGEROUS") {
@@ -115,10 +118,12 @@ if (data != null && data is Map) {
     statsRef.child("dangerousCount")
         .set(dangerousCount);
 
-    showNotification(
-      "🚨 Flood Alert",
-      "Dangerous flood level detected! Move vehicle immediately.",
-    );
+    if (DashboardPage.notificationsEnabled) {
+      showNotification(
+        "🚨 Flood Alert",
+        "Dangerous flood level detected! Move vehicle immediately.",
+      );
+    }
   }
 
   previousStatus = newStatus;

@@ -21,6 +21,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
+  static bool notificationsEnabled = true;
+
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
@@ -36,7 +38,9 @@ class _DashboardPageState extends State<DashboardPage> {
   String lastSync = DateTime.now().toString().substring(0, 19);
 
   StreamSubscription? _deviceHealthSubscription;
+  StreamSubscription? _connectedSubscription;
   bool _lastOfflineState = false;
+  bool _isFirebaseConnected = true;
   String _lastWifiFailure = "NORMAL";
   String _lastUltrasonicFailure = "NORMAL";
   String _lastWaterSensorFailure = "NORMAL";
@@ -58,11 +62,19 @@ class _DashboardPageState extends State<DashboardPage> {
     listenToHistory();
     listenToRatings();
     listenToFloodStatus();
+    _connectedSubscription = database.ref(".info/connected").onValue.listen((event) {
+      final connected = event.snapshot.value == true;
+      if (!mounted) return;
+      setState(() {
+        _isFirebaseConnected = connected;
+      });
+    });
   }
 
   @override
   void dispose() {
     _deviceHealthSubscription?.cancel();
+    _connectedSubscription?.cancel();
     super.dispose();
   }
 
@@ -780,22 +792,64 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 14),
           buildInfoRow(
-            icon: Icons.cloud_done,
-            text: "Firebase Connected",
-            color: Colors.green,
+            icon: _isFirebaseConnected ? Icons.cloud_done : Icons.cloud_off,
+            text: _isFirebaseConnected ? "Firebase Connected" : "Firebase Disconnected",
+            color: _isFirebaseConnected ? Colors.green : Colors.red,
             isDarkMode: isDarkMode,
           ),
-          buildInfoRow(
-            icon: Icons.notifications_active,
-            text: "Notifications Enabled",
-            color: Colors.orange,
-            isDarkMode: isDarkMode,
-          ),
+          buildNotificationToggleRow(isDarkMode),
           buildInfoRow(
             icon: Icons.sync,
             text: "Last Sync: $lastSync",
             color: Colors.blue,
             isDarkMode: isDarkMode,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildNotificationToggleRow(bool isDarkMode) {
+    final bool isEnabled = DashboardPage.notificationsEnabled;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(
+            isEnabled ? Icons.notifications_active : Icons.notifications_off,
+            color: isEnabled ? Colors.orange : Colors.grey,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "System Notifications",
+              style: TextStyle(
+                fontSize: 15,
+                color: mainTextColor(isDarkMode),
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 30,
+            child: Switch(
+              value: isEnabled,
+              activeColor: Colors.orange,
+              onChanged: (value) {
+                setState(() {
+                  DashboardPage.notificationsEnabled = value;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      value
+                          ? "System Notifications Enabled"
+                          : "System Notifications Disabled / Muted",
+                    ),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
