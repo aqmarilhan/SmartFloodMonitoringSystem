@@ -274,7 +274,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
     if (value == null) return "--";
 
-    return value.toStringAsFixed(2);
+    return value.toStringAsFixed(1);
   }
 
   int verifyDataIntegrity(Map<dynamic, dynamic> history) {

@@ -65,8 +65,8 @@ class _StatisticDetailPageState extends State<StatisticDetailPage> {
         if (status == widget.statusFilter.toUpperCase()) {
           records.add({
             "id": key.toString(),
-            "distance_cm": item["distance_cm"]?.toString() ?? "--",
-            "water_height_cm": item["water_height_cm"]?.toString() ?? "--",
+            "distance_cm": double.tryParse(item["distance_cm"]?.toString() ?? "")?.toStringAsFixed(1) ?? item["distance_cm"]?.toString() ?? "--",
+            "water_height_cm": double.tryParse(item["water_height_cm"]?.toString() ?? "")?.toStringAsFixed(1) ?? item["water_height_cm"]?.toString() ?? "--",
             "water_level": item["water_level"]?.toString() ?? "--",
             "flood_status": item["flood_status"]?.toString() ?? "--",
             "led_indicator_status":
