@@ -17,6 +17,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -838,6 +839,14 @@ class _DashboardPageState extends State<DashboardPage> {
                 setState(() {
                   DashboardPage.notificationsEnabled = value;
                 });
+                try {
+                  FlutterBackgroundService().invoke(
+                    'setNotificationEnabled',
+                    {'enabled': value},
+                  );
+                } catch (e) {
+                  debugPrint("Error sending toggle to background: $e");
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(

@@ -91,6 +91,13 @@ void onBackgroundServiceStart(ServiceInstance service) async {
   final floodRef = database.ref("FloodMonitoring");
 
   String previousStatus = "";
+  bool bgNotificationsEnabled = true;
+
+  service.on("setNotificationEnabled").listen((event) {
+    if (event != null && event.containsKey("enabled")) {
+      bgNotificationsEnabled = event["enabled"] as bool;
+    }
+  });
 
   if (service is AndroidServiceInstance) {
     service.setForegroundNotificationInfo(
@@ -113,15 +120,19 @@ void onBackgroundServiceStart(ServiceInstance service) async {
     previousStatus = currentStatus;
 
     if (currentStatus == "WARNING") {
-      await showBackgroundNotification(
-        "⚠️ Flood Warning",
-        "Water level is increasing. Stay alert.",
-      );
+      if (bgNotificationsEnabled) {
+        await showBackgroundNotification(
+          "⚠️ Flood Warning",
+          "Water level is increasing. Stay alert.",
+        );
+      }
     } else if (currentStatus == "DANGEROUS") {
-      await showBackgroundNotification(
-        "🚨 Flood Alert",
-        "Dangerous flood level detected! Move vehicle immediately.",
-      );
+      if (bgNotificationsEnabled) {
+        await showBackgroundNotification(
+          "🚨 Flood Alert",
+          "Dangerous flood level detected! Move vehicle immediately.",
+        );
+      }
     }
   });
 
