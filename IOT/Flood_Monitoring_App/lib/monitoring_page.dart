@@ -204,38 +204,38 @@ if (data != null && data is Map) {
   }
 
   String getDistanceCondition() {
-    final value = getDistanceValue();
-
-    if (value >= 5.0) {
+    if (floodStatus == "SAFE") {
       return "Safe distance";
-    } else if (value >= 3.0) {
+    } else if (floodStatus == "WARNING") {
       return "Water is getting closer";
-    } else {
+    } else if (floodStatus == "DANGEROUS") {
       return "Water is too close";
+    } else {
+      return "Loading status...";
     }
   }
 
   String getDistanceDescription() {
-    final value = getDistanceValue();
-
-    if (value >= 5.0) {
-      return "The water surface is still far from the ultrasonic sensor.";
-    } else if (value >= 3.0) {
-      return "The water level is rising and getting closer to the sensor.";
+    if (floodStatus == "SAFE") {
+      return "The water level is low. The water surface is still far from the sensor.";
+    } else if (floodStatus == "WARNING") {
+      return "Water level is rising. The distance to the sensor is decreasing.";
+    } else if (floodStatus == "DANGEROUS") {
+      return "Dangerous water level. The water is very close to the sensor.";
     } else {
-      return "The water is very close to the sensor. Immediate action is needed.";
+      return "Waiting for telemetry updates...";
     }
   }
 
   Color getDistanceColor() {
-    final value = getDistanceValue();
-
-    if (value >= 5.0) {
+    if (floodStatus == "SAFE") {
       return Colors.green;
-    } else if (value >= 3.0) {
+    } else if (floodStatus == "WARNING") {
       return Colors.orange;
-    } else {
+    } else if (floodStatus == "DANGEROUS") {
       return Colors.red;
+    } else {
+      return Colors.grey;
     }
   }
 
@@ -470,8 +470,9 @@ Widget buildModernStatusHeader() {
           getStatusDescription(),
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 13,
-            height: 1.4,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            height: 1.45,
             color: Colors.white,
           ),
         ),

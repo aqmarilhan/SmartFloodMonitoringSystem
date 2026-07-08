@@ -686,52 +686,68 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 10,
-        ),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 14,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: color.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: mainTextColor(isDarkMode),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: subTextColor(isDarkMode),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: subTextColor(isDarkMode).withOpacity(0.5),
+                  size: 16,
+                ),
+              ],
             ),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 24,
-          ),
         ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: mainTextColor(isDarkMode),
-            letterSpacing: -0.2,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            subtitle,
-            style: TextStyle(
-              color: subTextColor(isDarkMode),
-              fontSize: 13,
-            ),
-          ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios_rounded,
-          color: subTextColor(isDarkMode).withOpacity(0.7),
-          size: 16,
-        ),
-        onTap: onTap,
       ),
     );
   }
