@@ -32,6 +32,7 @@ class _FloodMonitoringPageState extends State<FloodMonitoringPage> {
   }
 
   String distance = "--";
+  String waterHeightCm = "--";
   String waterLevel = "--";
   String floodStatus = "--";
   String ledStatus = "--";
@@ -43,6 +44,10 @@ class _FloodMonitoringPageState extends State<FloodMonitoringPage> {
 
   bool firebaseConnected = true;
   bool notificationsEnabled = true;
+
+  double bucketDepth = 34.0;
+  double warningWaterHeight = 10.0;
+  double dangerWaterHeight = 13.5;
 
   @override
   void initState() {
@@ -58,6 +63,19 @@ class _FloodMonitoringPageState extends State<FloodMonitoringPage> {
 
     floodRef = database.ref("FloodMonitoring");
     statsRef = database.ref("Statistics");
+
+    database.ref("Settings").onValue.listen((event) {
+      final data = event.snapshot.value;
+      if (data != null && data is Map) {
+        final settings = Map<dynamic, dynamic>.from(data);
+        if (!mounted) return;
+        setState(() {
+          bucketDepth = double.tryParse(settings["bucketDepth"]?.toString() ?? "") ?? 34.0;
+          warningWaterHeight = double.tryParse(settings["warningWaterHeight"]?.toString() ?? "") ?? 10.0;
+          dangerWaterHeight = double.tryParse(settings["dangerWaterHeight"]?.toString() ?? "") ?? 13.5;
+        });
+      }
+    });
 
     statsRef.once().then((snapshot) {
 
@@ -133,6 +151,9 @@ if (data != null && data is Map) {
 
     distance =
         data["distance_cm"]?.toString() ?? "--";
+
+    waterHeightCm =
+        data["water_height_cm"]?.toString() ?? "--";
 
     waterLevel =
         data["water_level"]?.toString() ?? "--";
@@ -210,23 +231,26 @@ if (data != null && data is Map) {
 
   String getDistanceCondition() {
     if (floodStatus == "SAFE") {
-      return "Safe distance";
+      return "Safe level";
     } else if (floodStatus == "WARNING") {
-      return "Water is getting closer";
+      return "Warning level";
     } else if (floodStatus == "DANGEROUS") {
-      return "Water is too close";
+      return "Danger level";
     } else {
       return "Loading status...";
     }
   }
 
   String getDistanceDescription() {
+    final height = double.tryParse(waterHeightCm) ?? 0.0;
     if (floodStatus == "SAFE") {
-      return "The water level is low. The water surface is still far from the sensor.";
+      return "Water height is at ${height.toStringAsFixed(1)} cm. The level is normal (below warning threshold of ${warningWaterHeight.toStringAsFixed(1)} cm).";
     } else if (floodStatus == "WARNING") {
-      return "Water level is rising. The distance to the sensor is decreasing.";
+      final excess = height - warningWaterHeight;
+      return "Water height is at ${height.toStringAsFixed(1)} cm, exceeding the warning threshold of ${warningWaterHeight.toStringAsFixed(1)} cm by ${excess.toStringAsFixed(1)} cm!";
     } else if (floodStatus == "DANGEROUS") {
-      return "Dangerous water level. The water is very close to the sensor.";
+      final excess = height - dangerWaterHeight;
+      return "🚨 CRITICAL: Water height is at ${height.toStringAsFixed(1)} cm, exceeding the danger threshold of ${dangerWaterHeight.toStringAsFixed(1)} cm by ${excess.toStringAsFixed(1)} cm! Move vehicles immediately.";
     } else {
       return "Waiting for telemetry updates...";
     }
@@ -244,27 +268,38 @@ if (data != null && data is Map) {
     }
   }
 
+  String getWaterSensorDisplay() {
+    final value = getWaterValue();
+    if (value < 1000) {
+      return "Dry (0%)";
+    } else if (value < 1700) {
+      final percentage = (50 + ((value - 1000) / 700.0) * 30).clamp(50.0, 80.0);
+      return "Wet (${percentage.toStringAsFixed(0)}%)";
+    } else {
+      final percentage = (80 + ((value - 1700) / (4095 - 1700.0)) * 20).clamp(80.0, 100.0);
+      return "Submerged (${percentage.toStringAsFixed(0)}%)";
+    }
+  }
+
   String getWaterCondition() {
     final value = getWaterValue();
-
     if (value < 1000) {
-      return "Low water detected";
+      return "Sensor is dry";
     } else if (value < 1700) {
-      return "Moderate water detected";
+      return "Water contact detected";
     } else {
-      return "High water detected";
+      return "Sensor submerged";
     }
   }
 
   String getWaterDescription() {
     final value = getWaterValue();
-
     if (value < 1000) {
-      return "The water sensor reading is low. This usually means the sensor is dry or only slightly wet.";
+      return "Moisture level is normal. No physical water contact detected at the 13.5 cm warning level.";
     } else if (value < 1700) {
-      return "The water sensor has detected water. This may indicate early flood risk.";
+      return "Active contact: The physical sensor at 13.5 cm is touching rising water.";
     } else {
-      return "The water sensor reading is high. This indicates dangerous water contact.";
+      return "🚨 CRITICAL: The physical water sensor is completely submerged under water.";
     }
   }
 
@@ -697,19 +732,19 @@ Widget buildSensorGuideCard() {
                 const SizedBox(height: 18),
 
                 buildSensorInfoCard(
-                  icon: Icons.straighten_rounded,
-                  title: "Distance from Water",
+                  icon: Icons.height_rounded,
+                  title: "Water Height (from bottom)",
                   value:
-                      "${double.tryParse(distance)?.toStringAsFixed(2) ?? distance} cm",
+                      "${double.tryParse(waterHeightCm)?.toStringAsFixed(1) ?? waterHeightCm} cm",
                   condition: getDistanceCondition(),
                   description: getDistanceDescription(),
                   color: getDistanceColor(),
                 ),
 
                 buildSensorInfoCard(
-                  icon: Icons.water_drop_outlined,
-                  title: "Water Sensor Reading",
-                  value: waterLevel,
+                  icon: Icons.opacity_rounded,
+                  title: "Moisture Contact Sensor",
+                  value: getWaterSensorDisplay(),
                   condition: getWaterCondition(),
                   description: getWaterDescription(),
                   color: getWaterColor(),
