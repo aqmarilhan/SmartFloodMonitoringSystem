@@ -586,9 +586,9 @@ Widget buildSensorGuideCard() {
               ),
               const SizedBox(height: 6),
               Text(
-                "• Lower distance means the water is rising.\n"
-                "• Higher water reading means more water is detected.\n"
-                "• Green means safe, orange warning, and red dangerous.",
+                "• Water Height shows the current water depth from the bottom of the container.\n"
+                "• Moisture Sensor shows if there is physical contact with water.\n"
+                "• The color indicator changes based on threat levels (Green, Orange, Red).",
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.5,
@@ -622,6 +622,13 @@ Widget buildSensorGuideCard() {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded),
+            tooltip: "Guide",
+            onPressed: () => _showHelpDialog(context, isDarkMode),
+          ),
+        ],
       ),
       body: Container(
         width: double.infinity,
@@ -828,6 +835,138 @@ Widget buildSensorGuideCard() {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context, bool isDarkMode) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+          title: Row(
+            children: [
+              Icon(
+                Icons.help_outline_rounded,
+                color: isDarkMode ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "User Quick Guide",
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Here is how to interpret the dashboard data:",
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey.shade300 : Colors.black87,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildHelpSection(
+                  icon: Icons.height_rounded,
+                  title: "Water Height (from bottom)",
+                  desc: "Shows the live depth of the water (in cm) inside the container. It goes up as water rises.",
+                  isDarkMode: isDarkMode,
+                ),
+                _buildHelpSection(
+                  icon: Icons.opacity_rounded,
+                  title: "Moisture Contact Sensor",
+                  desc: "Shows physical contact with water at the 13.5 cm line. It changes from Dry (0%) to Wet/Submerged as water reaches the sensor.",
+                  isDarkMode: isDarkMode,
+                ),
+                _buildHelpSection(
+                  icon: Icons.lens_rounded,
+                  title: "System Colors Legend",
+                  desc: "🟢 SAFE: Normal status.\n🟡 WARNING: Water exceeded 10.0 cm.\n🔴 DANGEROUS: Water exceeded 13.5 cm or touched the contact sensor.",
+                  isDarkMode: isDarkMode,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: isDarkMode ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Got it!",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHelpSection({
+    required IconData icon,
+    required String title,
+    required String desc,
+    required bool isDarkMode,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: isDarkMode ? Colors.lightBlueAccent : Colors.blue,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
